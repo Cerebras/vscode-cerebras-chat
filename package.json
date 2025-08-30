@@ -1,0 +1,51 @@
+{
+	"name": "chat",
+	"publisher": "Cerebras",
+	"displayName": "Cerebras Inference",
+	"description": "The world's fastest AI inference",
+	"icon": "logo.jpeg",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/cerebras/"
+	},
+	"version": "0.1.0",
+	"engines": {
+		"vscode": "^1.104.0-20250828"
+	},
+	"categories": [
+		"AI",
+		"Chat"
+	],
+	"activationEvents": [],
+	"contributes": {
+		"languageModelChatProviders": [
+			{
+				"vendor": "cerebras",
+				"displayName": "Cerebras"
+			}
+		]
+	},
+	"main": "./out/extension.js",
+	"scripts": {
+		"vscode:prepublish": "npm run compile",
+		"download-api": "dts dev",
+		"postdownload-api": "dts main",
+		"postinstall": "npm run download-api",
+		"compile": "tsc -p ./",
+		"lint": "eslint",
+		"watch": "tsc -watch -p ./"
+	},
+	"dependencies": {
+		"@cerebras/cerebras_cloud_sdk": "^1.0.0"
+	},
+	"devDependencies": {
+		"@eslint/js": "^9.13.0",
+		"@stylistic/eslint-plugin": "^2.9.0",
+		"@types/node": "^22",
+		"@vscode/dts": "^0.4.1",
+		"@types/vscode": "^1.103.0",
+		"eslint": "^9.13.0",
+		"typescript": "^5.9.2",
+		"typescript-eslint": "^8.39.0"
+	}
+}
