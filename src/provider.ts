@@ -1,4 +1,4 @@
-import { CancellationToken, LanguageModelChatInformation, LanguageModelChatMessage, LanguageModelChatMessageRole, LanguageModelChatProvider, LanguageModelChatRequestHandleOptions, LanguageModelResponsePart, LanguageModelTextPart, LanguageModelToolCallPart, LanguageModelToolResultPart, Progress, ProviderResult, window } from "vscode";
+import { CancellationToken, ExtensionContext, InputBoxValidationSeverity, LanguageModelChatInformation, LanguageModelChatMessage, LanguageModelChatMessageRole, LanguageModelChatProvider, LanguageModelChatRequestHandleOptions, LanguageModelResponsePart, LanguageModelTextPart, LanguageModelToolCallPart, LanguageModelToolResultPart, Progress, ProviderResult, window } from "vscode";
 import { Cerebras } from "@cerebras/cerebras_cloud_sdk";
 import { ChatCompletionCreateParams, ChatCompletionCreateParamsStreaming } from "@cerebras/cerebras_cloud_sdk/src/resources/chat/index.js";
 
@@ -136,37 +136,58 @@ function getChatModelInfo(model: CerebrasModel): LanguageModelChatInformation {
 export class CerebrasChatModelProvider implements LanguageModelChatProvider {
 	private client: Cerebras | null = null;
 
-	constructor() {
-		// Initialize the Cerebras client if API key is available
-		const apiKey = process.env.CEREBRAS_API_KEY;
+	constructor(private readonly context: ExtensionContext) { }
+
+	/**
+	 * Initialize the Cerebras client.
+	 * @param silent Whether to initialize silently without prompting for API key
+	 * @returns Whether the initialization was successful
+	 */
+	private async initClient(silent: boolean): Promise<boolean> {
+		if (this.client) {
+			return true;
+		}
+
+		// First try to silently get the API key from secrets
+		let apiKey = await this.context.secrets.get('CEREBRAS_API_KEY');
 		if (apiKey) {
 			this.client = new Cerebras({
 				apiKey: apiKey,
 			});
+			return true;
 		}
+
+		if (silent) {
+			return false;
+		}
+
+		// Prompt for API key if not silent using quickpick
+		apiKey = await window.showInputBox({
+			placeHolder: "Cerebras API Key",
+			prompt: "Enter your Cerebras API key",
+			ignoreFocusOut: true,
+			validateInput: (value) => {
+				if (!value.startsWith('csk-') || value.length !== 52) {
+					return { message: "Invalid API key", severity: InputBoxValidationSeverity.Error };
+				}
+			}
+		});
+		if (!apiKey) {
+			return false;
+		}
+
+		await this.context.secrets.store('CEREBRAS_API_KEY', apiKey || '');
+		this.client = new Cerebras({
+			apiKey: apiKey,
+		});
+
+		return true;
 	}
 
 	async prepareLanguageModelChatInformation(options: { silent: boolean; }, _token: CancellationToken): Promise<LanguageModelChatInformation[]> {
-		if (options.silent && !this.client) {
-			// If silent and no client, return empty list
+		const initialized = await this.initClient(options.silent);
+		if (!initialized) {
 			return [];
-		}
-
-		if (!this.client) {
-			// Prompt for API key if not silent using quickpick
-			const apiKey = await window.showInputBox({
-				placeHolder: "Cerebras API Key",
-				prompt: "Enter your Cerebras API key",
-				ignoreFocusOut: true,
-			});
-
-			if (!apiKey) {
-				return [];
-			}
-
-			this.client = new Cerebras({
-				apiKey: apiKey,
-			});
 		}
 
 		// Combine production and preview models
