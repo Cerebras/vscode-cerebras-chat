@@ -1,6 +1,7 @@
 import { CancellationToken, ExtensionContext, InputBoxValidationSeverity, LanguageModelChatInformation, LanguageModelChatMessage, LanguageModelChatMessageRole, LanguageModelChatProvider, LanguageModelChatRequestHandleOptions, LanguageModelResponsePart, LanguageModelTextPart, LanguageModelToolCallPart, LanguageModelToolResultPart, Progress, ProviderResult, window } from "vscode";
 import { Cerebras } from "@cerebras/cerebras_cloud_sdk";
 import { ChatCompletionCreateParams, ChatCompletionCreateParamsStreaming } from "@cerebras/cerebras_cloud_sdk/src/resources/chat/index.js";
+import { get_encoding, Tiktoken } from "tiktoken";
 
 
 type ChatCompletionMessage = ChatCompletionCreateParams.SystemMessageRequest | ChatCompletionCreateParams.ToolMessageRequest | ChatCompletionCreateParams.AssistantMessageRequest | ChatCompletionCreateParams.UserMessageRequest;
@@ -135,6 +136,7 @@ function getChatModelInfo(model: CerebrasModel): LanguageModelChatInformation {
 
 export class CerebrasChatModelProvider implements LanguageModelChatProvider {
 	private client: Cerebras | null = null;
+	private tokenizer: Tiktoken | null = null;
 
 	constructor(private readonly context: ExtensionContext) { }
 
@@ -331,8 +333,10 @@ export class CerebrasChatModelProvider implements LanguageModelChatProvider {
 	}
 
 	async provideTokenCount(_model: LanguageModelChatInformation, text: string | LanguageModelChatMessage, _token: CancellationToken): Promise<number> {
-		// In a real implementation, this would calculate actual token count
-		// For now, we'll use a simple estimation
+		if (!this.tokenizer) {
+			this.tokenizer = get_encoding("cl100k_base");
+		}
+
 		let textContent = '';
 
 		if (typeof text === 'string') {
@@ -344,10 +348,10 @@ export class CerebrasChatModelProvider implements LanguageModelChatProvider {
 					if (part instanceof LanguageModelTextPart) {
 						return part.value;
 					} else if (part instanceof LanguageModelToolCallPart) {
-						// Estimate tokens for tool calls (name + JSON-serialized input)
+						// Count tokens for tool calls (name + JSON-serialized input)
 						return part.name + JSON.stringify(part.input);
 					} else if (part instanceof LanguageModelToolResultPart) {
-						// Estimate tokens for tool results
+						// Count tokens for tool results
 						return part.content
 							.filter(resultPart => resultPart instanceof LanguageModelTextPart)
 							.map(resultPart => (resultPart as LanguageModelTextPart).value)
@@ -358,8 +362,9 @@ export class CerebrasChatModelProvider implements LanguageModelChatProvider {
 				.join('');
 		}
 
-		// Rough estimation: 1 token ≈ 4 characters
-		return Math.ceil(textContent.length / 4);
+		const tokens = this.tokenizer.encode(textContent);
+		this.tokenizer.free(); // Free associated memory
+		return tokens.length;
 	}
 }
 
