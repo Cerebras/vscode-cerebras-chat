@@ -2,6 +2,7 @@
 .vscode-test/**
 node_modules/**
 src/**
+out/**
 .gitignore
 .yarnrc
 esbuild.js
