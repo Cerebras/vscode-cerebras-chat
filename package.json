@@ -1,5 +1,5 @@
 {
-	"name": "chat",
+	"name": "cerebras-chat",
 	"publisher": "Cerebras",
 	"displayName": "Cerebras Inference",
 	"description": "The world's fastest AI inference",
