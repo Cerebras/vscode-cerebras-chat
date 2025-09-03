@@ -39,11 +39,6 @@ Once the extension is active and the API key is set:
 3. Select the Cerebras provider
 4. Check the models based on what you want in the model picker
 5. Send a request to the model
-## Development
-
-### Prerequisites
-- VS Code version 1.104.0 or higher
-- Node.js and npm installed
 
 ## Related
 
