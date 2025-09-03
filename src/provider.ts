@@ -1,4 +1,4 @@
-import { CancellationToken, ExtensionContext, InputBoxValidationSeverity, LanguageModelChatInformation, LanguageModelChatMessage, LanguageModelChatMessageRole, LanguageModelChatProvider, LanguageModelChatRequestHandleOptions, LanguageModelResponsePart, LanguageModelTextPart, LanguageModelToolCallPart, LanguageModelToolResultPart, Progress, ProviderResult, window } from "vscode";
+import { CancellationToken, ExtensionContext, InputBoxValidationSeverity, LanguageModelChatInformation, LanguageModelChatMessage, LanguageModelChatMessageRole, LanguageModelChatProvider, LanguageModelChatRequestHandleOptions, LanguageModelResponsePart, LanguageModelTextPart, LanguageModelToolCallPart, LanguageModelToolResultPart, Progress, window } from "vscode";
 import { Cerebras } from "@cerebras/cerebras_cloud_sdk";
 import { ChatCompletionCreateParams, ChatCompletionCreateParamsStreaming } from "@cerebras/cerebras_cloud_sdk/src/resources/chat/index.js";
 import { get_encoding, Tiktoken } from "tiktoken";
@@ -218,8 +218,8 @@ export class CerebrasChatModelProvider implements LanguageModelChatProvider {
 		// Handle text content, tool calls, and tool results
 		const cerebrasMessages: ChatCompletionMessage[] = messages.map(msg => {
 			const textContent: string[] = [];
-			const toolCalls: any[] = [];
-			let role = msg.role;
+			const toolCalls: ChatCompletionCreateParams.AssistantMessageRequest['tool_calls'] = [];
+			const role = msg.role;
 
 			for (const part of msg.content) {
 				if (part instanceof LanguageModelTextPart) {
@@ -233,7 +233,7 @@ export class CerebrasChatModelProvider implements LanguageModelChatProvider {
 							arguments: JSON.stringify(part.input)
 						}
 					});
-				} else if ('callId' in part) { // HACK: instanceof LanguageModelToolResultPart doesn't work
+				} else if (part instanceof LanguageModelToolResultPart) {
 					// Tool results should be in user messages
 					const resultContent = part.content
 						.filter(resultPart => resultPart instanceof LanguageModelTextPart)
@@ -253,17 +253,17 @@ export class CerebrasChatModelProvider implements LanguageModelChatProvider {
 			// Return message with tool calls if present
 			if (toolCalls.length > 0) {
 				return {
-					role: toChatMessageRole(role),
+					role: "assistant",
 					content: messageContent || '',
 					tool_calls: toolCalls
-				};
+				} satisfies ChatCompletionCreateParams.AssistantMessageRequest;
 			}
 
 			return {
 				role: toChatMessageRole(role),
 				content: messageContent
 			} satisfies ChatCompletionMessage;
-		}).filter(msg => msg.content !== null && msg.content.length > 0 || msg.role === "tool" || (msg as any).tool_calls);
+		}).filter(msg => msg.content !== null && msg.content.length > 0 || msg.role === "tool" || msg.tool_calls);
 
 		// Convert VS Code tools to Cerebras format
 		const cerebrasTools = options.tools?.map(tool => ({
