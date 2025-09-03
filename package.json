@@ -4,6 +4,7 @@
 	"displayName": "Cerebras Inference",
 	"description": "The world's fastest AI inference",
 	"icon": "logo.jpeg",
+	"license": "MIT",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/cerebras/"
