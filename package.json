@@ -9,7 +9,7 @@
 		"type": "git",
 		"url": "https://github.com/cerebras/"
 	},
-	"version": "0.1.1",
+	"version": "0.1.2",
 	"engines": {
 		"vscode": "^1.104.0-20250828"
 	},
