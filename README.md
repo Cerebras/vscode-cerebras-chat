@@ -45,27 +45,9 @@ Once the extension is active and the API key is set:
 - VS Code version 1.104.0 or higher
 - Node.js and npm installed
 
-### Installation and Development
-
-1. Clone this repository
-2. Navigate to the extension directory:
-   ```bash
-   cd chat-model-provider-sample
-   ```
-3. Install dependencies:
-   ```bash
-   npm install
-   ```
-4. Compile the extension:
-   ```bash
-   npm run compile
-   ```
-5. Press `F5` to launch a new Extension Development Host window
-6. The extension will be active and ready to provide Cerebras chat models
-
 ## Related
 
+- [Cerebras Inference Documentation](https://inference-docs.cerebras.ai/)
 - [VS Code Extension API](https://code.visualstudio.com/api)
 - [Language Model API Documentation](https://code.visualstudio.com/api/extension-guides/chat)
 - [VS Code Extension Samples](https://github.com/Microsoft/vscode-extension-samples)
-- [Cerebras Inference Documentation](https://inference-docs.cerebras.ai/)
