@@ -24,6 +24,63 @@
 				"vendor": "cerebras",
 				"displayName": "Cerebras"
 			}
+		],
+		"walkthroughs": [
+			{
+				"id": "cerebras.getStarted",
+				"title": "Get Started with Cerebras Inference",
+				"description": "Learn how to set up and use Cerebras models in VS Code for the world's fastest AI inference.",
+				"steps": [
+					{
+						"id": "cerebras.getApiKey",
+						"title": "Get your Cerebras API Key",
+						"description": "First, you'll need to obtain an API key from Cerebras Cloud to access the models.\n\n[Get API Key from Cerebras Cloud](https://cloud.cerebras.ai/)\n\nOnce you have your API key, you'll use it in the next steps to configure the extension.",
+						"media": {
+							"image": "logo.jpeg",
+							"altText": "Cerebras logo"
+						}
+					},
+					{
+						"id": "cerebras.openChat",
+						"title": "Open GitHub Copilot Chat",
+						"description": "Open the GitHub Copilot Chat interface where you'll interact with Cerebras models.\n\nYou can open it by:\n- Using the Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`) and typing \"Chat: Focus on Chat View\"\n- Clicking the Chat icon in the Activity Bar\n- Using the keyboard shortcut `Ctrl+Alt+I` / `Cmd+Alt+I`",
+						"media": {
+							"image": "logo.jpeg",
+							"altText": "Open chat interface"
+						},
+						"commands": [
+							"workbench.panel.chat.view.copilot.focus"
+						]
+					},
+					{
+						"id": "cerebras.manageModels",
+						"title": "Access Manage Models",
+						"description": "In the chat interface, you'll need to configure the Cerebras models.\n\n1. Look for the model picker (usually shows the current model name)\n2. Click on it to open the model selection dropdown\n3. Click \"Manage Models\" at the bottom of the dropdown\n\nThis will open the model management interface where you can configure providers.",
+						"media": {
+							"image": "logo.jpeg",
+							"altText": "Manage models interface"
+						}
+					},
+					{
+						"id": "cerebras.configureProvider",
+						"title": "Configure Cerebras Provider",
+						"description": "In the Manage Models interface:\n\n1. Find the \"Cerebras\" provider in the list\n2. Enter your API key from step 1\n3. Select which Cerebras models you want to use:\n   - **Llama 4 Scout** - Fast general-purpose model\n   - **Llama 3.1 8B** - Efficient for everyday tasks\n   - **Llama 3.3 70B** - High-quality responses\n   - **OpenAI GPT OSS** - OpenAI-compatible model\n   - And more preview models\n\nYour API key will be securely stored and the selected models will appear in the model picker.",
+						"media": {
+							"image": "logo.jpeg",
+							"altText": "Configure Cerebras provider"
+						}
+					},
+					{
+						"id": "cerebras.firstRequest",
+						"title": "Send Your First Request",
+						"description": "Now you're ready to experience the world's fastest AI inference!\n\n1. Return to the chat interface\n2. Select a Cerebras model from the model picker\n3. Type your question or request\n4. Press Enter to send\n\nEnjoy lightning-fast responses powered by Cerebras' Wafer-Scale Engine technology!\n\n**Example prompts to try:**\n- \"Explain quantum computing in simple terms\"\n- \"Write a Python function to calculate fibonacci numbers\"\n- \"Help me debug this code snippet\"",
+						"media": {
+							"image": "logo.jpeg",
+							"altText": "Send your first request"
+						}
+					}
+				]
+			}
 		]
 	},
 	"main": "./dist/extension.js",
