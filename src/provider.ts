@@ -50,6 +50,7 @@ const PRODUCTION_MODELS = [
 		name: "Qwen 3 32B",
 		detail: "~2,600 tokens/sec",
 		maxInputTokens: 128000, // 128k for paid tiers, 64k for free tier
+		supportsThinking: true,
 		maxOutputTokens: 8000,
 		toolCalling: false,
 		supportsReasoningEffort: false,
@@ -89,6 +90,7 @@ const PREVIEW_MODELS = [
 		maxOutputTokens: 64000,
 		toolCalling: false,
 		supportsReasoningEffort: false,
+		supportsThinking: true,
 		supportsParallelToolCalls: true
 	},
 	{
@@ -134,9 +136,12 @@ function getChatModelInfo(model: CerebrasModel): LanguageModelChatInformation {
 	};
 }
 
+const THINK_DELIMITER = '</think>';
+
 export class CerebrasChatModelProvider implements LanguageModelChatProvider {
 	private client: Cerebras | null = null;
 	private tokenizer: Tiktoken | null = null;
+	private textBuffer: string = ''; // Add text buffer to accumulate content
 
 	constructor(private readonly context: ExtensionContext) { }
 
@@ -178,7 +183,7 @@ export class CerebrasChatModelProvider implements LanguageModelChatProvider {
 			return false;
 		}
 
-		await this.context.secrets.store('CEREBRAS_API_KEY', apiKey || '');
+		await this.context.secrets.store('CEREBRAS_API_KEY', apiKey);
 		this.client = new Cerebras({
 			apiKey: apiKey,
 		});
@@ -293,6 +298,9 @@ export class CerebrasChatModelProvider implements LanguageModelChatProvider {
 
 		const chatCompletion = await this.client.chat.completions.create(requestOptions);
 
+		// Reset text buffer at the start of each response
+		let thinkingBuffer: string | null = '';
+
 		// Process streaming response
 		for await (const chunk of chatCompletion) {
 			// Check if the operation was cancelled
@@ -305,9 +313,27 @@ export class CerebrasChatModelProvider implements LanguageModelChatProvider {
 				const choice = chunk.choices[0];
 				const delta = choice.delta;
 
-				// Handle text content
+				// Handle text content with buffering logic
 				if (delta?.content) {
-					progress.report(new LanguageModelTextPart(delta.content));
+					if (!foundModel.supportsThinking || thinkingBuffer === null) {
+						// If thinking is not supported for this model, we can process the content directly
+						progress.report(new LanguageModelTextPart(delta.content));
+					} else {
+						// Accumulate content in buffer
+						thinkingBuffer += delta.content;
+
+						// Check if buffer contains the delimiter
+						const delimiterIndex = thinkingBuffer.indexOf(THINK_DELIMITER);
+						if (delimiterIndex !== -1) {
+							// Report only the text after the delimiter
+							const textAfterDelimiter = thinkingBuffer.substring(delimiterIndex + THINK_DELIMITER.length).trim();
+							if (textAfterDelimiter) {
+								progress.report(new LanguageModelTextPart(textAfterDelimiter));
+							}
+							// Clear the buffer after processing
+							thinkingBuffer = null;
+						}
+					}
 				}
 
 				// Handle tool calls
