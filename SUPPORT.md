@@ -88,7 +88,7 @@ For additional support, you can also reach out through:
 
 ## Security Issues
 
-If you discover a security vulnerability, please contact us at support@cerebras.ai with details.
+If you discover a security vulnerability, please contact us at security@cerebras.net with details.
 
 ## Providing Feedback
 

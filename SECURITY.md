@@ -5,7 +5,7 @@
 Cerebras takes security seriously, and encourages you to report any security vulnerability
 promptly so that appropriate action can be taken.
 
-To report a security issue, please contact the Cerebras team at support@cerebras.ai.
+To report a security issue, please contact the Cerebras team at security@cerebras.net.
 
 ## Responsible Disclosure
 
