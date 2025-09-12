@@ -255,7 +255,7 @@ export class CerebrasChatModelProvider implements LanguageModelChatProvider {
 				role: toChatMessageRole(role),
 				content: messageContent
 			} satisfies ChatCompletionMessage;
-		}).filter(msg => msg.content !== null && msg.content.length > 0 || msg.role === "tool" || msg.tool_calls);
+		}).filter(msg => (msg.content !== null && msg.content.length > 0) || (msg.role === "tool" || msg.tool_calls));
 
 		// Convert VS Code tools to Cerebras format
 		const cerebrasTools = options.tools?.map(tool => ({
