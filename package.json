@@ -5,11 +5,12 @@
 	"description": "The world's fastest AI inference",
 	"icon": "logo.jpeg",
 	"license": "MIT",
+	"preview": true,
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/cerebras/vscode-cerebras-chat"
 	},
-	"version": "0.1.6",
+	"version": "0.1.9",
 	"engines": {
 		"vscode": "^1.104.0-20250828"
 	},

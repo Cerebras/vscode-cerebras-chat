@@ -92,19 +92,7 @@ const PREVIEW_MODELS = [
 		supportsReasoningEffort: false,
 		supportsThinking: true,
 		supportsParallelToolCalls: true
-	},
-	{
-		id: "llama-4-maverick-17b-128e-instruct",
-		name: "Llama 4 Maverick",
-		detail: "~1,500 tokens/sec",
-		maxInputTokens: 32000, // 32k for paid tiers, 8k for free tier
-		maxOutputTokens: 8000,
-		toolCalling: false,
-		supportsParallelToolCalls: true,
-		temperature: 0.6,
-		min_p: 0.01,
-		top_p: 0.9
-	},
+	}
 ];
 
 interface CerebrasModel {
@@ -267,7 +255,7 @@ export class CerebrasChatModelProvider implements LanguageModelChatProvider {
 				role: toChatMessageRole(role),
 				content: messageContent
 			} satisfies ChatCompletionMessage;
-		}).filter(msg => msg.content !== null && msg.content.length > 0 || msg.role === "tool" || msg.tool_calls);
+		}).filter(msg => (msg.content !== null && msg.content.length > 0) || (msg.role === "tool" || msg.tool_calls));
 
 		// Convert VS Code tools to Cerebras format
 		const cerebrasTools = options.tools?.map(tool => ({

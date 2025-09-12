@@ -4,8 +4,6 @@
 
 Make GitHub Copilot run 10× faster with the world’s fastest inference API. Cerebras Inference powers the world’s top coding models at 2,000 tokens/sec, making code generation instant and enabling super-fast agentic flows. Get your [free API key](https://cloud.cerebras.ai/?referral_code=vscode&utm_source=vscode) to get started today.
 
-![Cerebras Inference in VS Code](cerebras.png)
-
 ## Get Started
 
 ### API Key Setup
@@ -34,7 +32,6 @@ This extension provides support for **Qwen 3 Coder in agent mode**, as well as t
 | Qwen 3 480B Coder (Preview) | ~2,000 tokens/sec |
 | Qwen 3 235B Instruct (Preview) | ~1,400 tokens/sec |
 | Qwen 3 235B Thinking (Preview) | ~1,700 tokens/sec |
-| Llama 4 Maverick (Preview) | ~1,500 tokens/sec |
 | Llama 4 Scout | ~2,600 tokens/sec |
 | Llama 3.1 8B | ~2,200 tokens/sec |
 | Llama 3.3 70B | ~2,100 tokens/sec |
@@ -42,8 +39,8 @@ This extension provides support for **Qwen 3 Coder in agent mode**, as well as t
 ### Advanced Tips
 
 Here's how you can accomplish more with Cerebras:
-* Generate code at top speed with Cerebras by installing the [Cerebras Code MCP server](https://inference-docs.cerebras.ai/integrations/code-mcp).
 * Get higher rate limits on Qwen 3 Coder with our [Cerebras Code](https://www.cerebras.ai/blog/introducing-cerebras-code) plans, starting at $50/month.
+* Generate code at top speed with Cerebras by installing the [Cerebras Code MCP server](https://inference-docs.cerebras.ai/integrations/code-mcp).
 * Read our [developer documentation](https://inference-docs.cerebras.ai/) to turbocharge your own AI products using Cerebras' Inference API.
 
 ## What is Cerebras?
