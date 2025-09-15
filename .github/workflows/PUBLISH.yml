@@ -1,11 +1,8 @@
 on:
   workflow_dispatch:
   push:
-    branches:
-    - main
-  release:
-    types:
-    - created
+    tags:
+    - '*'
 
 jobs:
   build:
@@ -19,10 +16,20 @@ jobs:
     - name: Install Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: 20.x
-    - run: npm install
+        node-version: 22.18.0
+    - run: npm ci
+    - name: Package Extension
+      run: |
+        npx vsce package
+        mkdir -p out
+        mv *.vsix out/
+    - name: Upload VSIX Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: vsix-${{ github.ref_name }}
+        path: out/
     - name: Publish
-      if: success() && startsWith(github.ref, 'refs/tags/')
+      if: success()
       run: npm run prerelease
       env:
         VSCE_PAT: ${{ secrets.VSCE_PAT }}
