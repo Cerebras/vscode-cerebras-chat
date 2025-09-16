@@ -1,0 +1,35 @@
+on:
+  workflow_dispatch:
+  push:
+    tags:
+    - '*'
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+    - name: Install Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 22.18.0
+    - run: npm ci
+    - name: Package Extension
+      run: |
+        npx vsce package
+        mkdir -p out
+        mv *.vsix out/
+    - name: Upload VSIX Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: vsix-${{ github.ref_name }}
+        path: out/
+    - name: Publish
+      if: success()
+      run: npm run prerelease
+      env:
+        VSCE_PAT: ${{ secrets.VSCE_PAT }}

@@ -36,6 +36,8 @@
 		"watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
 		"package": "npm run check-types && npm run lint && node esbuild.js --production",
 		"check-types": "tsc --noEmit",
+		"deploy": "vsce publish",
+		"prerelease": "vsce publish --pre-release",
 		"lint": "eslint src"
 	},
 	"dependencies": {
