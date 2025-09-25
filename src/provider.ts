@@ -164,7 +164,7 @@ export class CerebrasChatModelProvider implements LanguageModelChatProvider {
 			return undefined;
 		}
 
-		await this.context.secrets.store('CEREBRAS_API_KEY', apiKey);
+		void this.context.secrets.store('CEREBRAS_API_KEY', apiKey);
 		this.client = new Cerebras({
 			apiKey: apiKey,
 		});
@@ -194,6 +194,7 @@ export class CerebrasChatModelProvider implements LanguageModelChatProvider {
 	async provideLanguageModelChatInformation(options: { silent: boolean; }, _token: CancellationToken): Promise<LanguageModelChatInformation[]> {
 		const initialized = await this.initClient(options.silent);
 		if (!initialized) {
+			console.warn('Cerebras client not initialized. Please set your API key.');
 			return [];
 		}
 
