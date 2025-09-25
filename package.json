@@ -23,7 +23,15 @@
 		"languageModelChatProviders": [
 			{
 				"vendor": "cerebras",
-				"displayName": "Cerebras"
+				"displayName": "Cerebras",
+				"managementCommand": "cerebras-chat.manageApiKey"
+			}
+		],
+		"commands": [
+			{
+				"command": "cerebras-chat.manageApiKey",
+				"title": "Cerebras: Manage API Key",
+				"enablement": "false"
 			}
 		]
 	},
