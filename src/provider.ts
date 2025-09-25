@@ -133,31 +133,24 @@ export class CerebrasChatModelProvider implements LanguageModelChatProvider {
 	constructor(private readonly context: ExtensionContext) { }
 
 	/**
-	 * Initialize the Cerebras client.
-	 * @param silent Whether to initialize silently without prompting for API key
-	 * @returns Whether the initialization was successful
+	 * Prompts the user to enter their Cerebras API key and stores it securely.
+	 *
+	 * @param apiKey - Optional pre-filled API key value to display in the input box
+	 * @returns A promise that resolves to the entered API key if valid, or undefined if cancelled
+	 *
+	 * @remarks
+	 * This method validates that the API key:
+	 * - Starts with 'csk-' prefix
+	 * - Is exactly 52 characters long
+	 *
+	 * The API key is stored securely using VS Code's secrets API under the key 'CEREBRAS_API_KEY'.
 	 */
-	private async initClient(silent: boolean): Promise<boolean> {
-		if (this.client && silent) {
-			return true;
-		}
-
-		// First try to silently get the API key from secrets
+	public async setApiKey(): Promise<string | undefined> {
 		let apiKey: string | undefined = await this.context.secrets.get('CEREBRAS_API_KEY');
-		if (silent && apiKey) {
-			this.client = new Cerebras({
-				apiKey: apiKey,
-			});
-			return true;
-		} else if (silent && !apiKey) {
-			return false;
-		}
-
-		// Prompt for API key if not silent using quickpick
 		apiKey = await window.showInputBox({
 			placeHolder: "Cerebras API Key (e.g. csk-...)",
-			value: apiKey,
 			password: true,
+			value: apiKey || '',
 			prompt: "Enter your Cerebras API key",
 			ignoreFocusOut: true,
 			validateInput: (value) => {
@@ -166,8 +159,9 @@ export class CerebrasChatModelProvider implements LanguageModelChatProvider {
 				}
 			}
 		});
+
 		if (!apiKey) {
-			return false;
+			return undefined;
 		}
 
 		await this.context.secrets.store('CEREBRAS_API_KEY', apiKey);
@@ -175,7 +169,26 @@ export class CerebrasChatModelProvider implements LanguageModelChatProvider {
 			apiKey: apiKey,
 		});
 
-		return true;
+		return apiKey;
+	}
+
+	/**
+	 * Initialize the Cerebras client.
+	 * @param silent Whether to initialize silently without prompting for API key
+	 * @returns Whether the initialization was successful
+	 */
+	private async initClient(silent: boolean): Promise<boolean> {
+		if (this.client) {
+			return true;
+		}
+
+		// Prompt for API key if not silent using quickpick
+		let apiKey: string | undefined = await this.context.secrets.get('CEREBRAS_API_KEY');
+		if (!silent && !apiKey) {
+			apiKey = await this.setApiKey();
+		}
+
+		return !!apiKey;
 	}
 
 	async prepareLanguageModelChatInformation(options: { silent: boolean; }, _token: CancellationToken): Promise<LanguageModelChatInformation[]> {
