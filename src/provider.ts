@@ -186,6 +186,10 @@ export class CerebrasChatModelProvider implements LanguageModelChatProvider {
 		let apiKey: string | undefined = await this.context.secrets.get('CEREBRAS_API_KEY');
 		if (!silent && !apiKey) {
 			apiKey = await this.setApiKey();
+		} else if (apiKey) {
+			this.client = new Cerebras({
+				apiKey: apiKey,
+			});
 		}
 
 		return !!apiKey;
