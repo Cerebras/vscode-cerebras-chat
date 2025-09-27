@@ -10,9 +10,9 @@
 		"type": "git",
 		"url": "https://github.com/cerebras/vscode-cerebras-chat"
 	},
-	"version": "0.1.12",
+	"version": "0.1.13",
 	"engines": {
-		"vscode": "^1.105.0"
+		"vscode": "^1.104.0"
 	},
 	"categories": [
 		"AI",
