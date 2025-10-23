@@ -140,7 +140,7 @@ export class CerebrasChatModelProvider implements LanguageModelChatProvider {
 	 *
 	 * @remarks
 	 * This method validates that the API key:
-	 * - Starts with 'csk-' prefix
+	 * - Starts with 'csk_' prefix
 	 * - Is exactly 52 characters long
 	 *
 	 * The API key is stored securely using VS Code's secrets API under the key 'CEREBRAS_API_KEY'.
@@ -148,13 +148,13 @@ export class CerebrasChatModelProvider implements LanguageModelChatProvider {
 	public async setApiKey(): Promise<string | undefined> {
 		let apiKey: string | undefined = await this.context.secrets.get('CEREBRAS_API_KEY');
 		apiKey = await window.showInputBox({
-			placeHolder: "Cerebras API Key (e.g. csk-...)",
+			placeHolder: "Cerebras API Key (e.g. csk_...)",
 			password: true,
 			value: apiKey || '',
 			prompt: "Enter your Cerebras API key",
 			ignoreFocusOut: true,
 			validateInput: (value) => {
-				if (!value.startsWith('csk-') || value.length !== 52) {
+				if (!value.startsWith('csk_') || value.length !== 52) {
 					return { message: "Invalid API key", severity: InputBoxValidationSeverity.Error };
 				}
 			}
