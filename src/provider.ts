@@ -154,7 +154,7 @@ export class CerebrasChatModelProvider implements LanguageModelChatProvider {
 			prompt: "Enter your Cerebras API key",
 			ignoreFocusOut: true,
 			validateInput: (value) => {
-				if (!value.startsWith('csk_') || value.length !== 52) {
+				if ((!value.startsWith('csk_') && !value.startsWith('csk-')) || value.length !== 52) {
 					return { message: "Invalid API key", severity: InputBoxValidationSeverity.Error };
 				}
 			}
