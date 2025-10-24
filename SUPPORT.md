@@ -42,7 +42,7 @@ When filing an issue, please include:
 2. Sign up for a free account
 3. Navigate to the API keys section
 4. Generate a new API key
-5. Copy the key (it should start with `csk_`)
+5. Copy the key (it should start with `csk-`)
 
 ### What models are supported?
 

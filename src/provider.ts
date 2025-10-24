@@ -140,7 +140,7 @@ export class CerebrasChatModelProvider implements LanguageModelChatProvider {
 	 *
 	 * @remarks
 	 * This method validates that the API key:
-	 * - Starts with 'csk_' prefix
+	 * - Starts with 'csk_' or 'csk-' prefix
 	 * - Is exactly 52 characters long
 	 *
 	 * The API key is stored securely using VS Code's secrets API under the key 'CEREBRAS_API_KEY'.
