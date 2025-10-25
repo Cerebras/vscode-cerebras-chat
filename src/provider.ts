@@ -148,7 +148,7 @@ export class CerebrasChatModelProvider implements LanguageModelChatProvider {
 	public async setApiKey(): Promise<string | undefined> {
 		let apiKey: string | undefined = await this.context.secrets.get('CEREBRAS_API_KEY');
 		apiKey = await window.showInputBox({
-			placeHolder: "Cerebras API Key (e.g. csk_...)",
+			placeHolder: "Cerebras API Key (e.g. csk-...)",
 			password: true,
 			value: apiKey || '',
 			prompt: "Enter your Cerebras API key",
