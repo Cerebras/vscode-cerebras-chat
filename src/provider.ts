@@ -10,7 +10,7 @@ type ChatCompletionMessage = ChatCompletionCreateParams.SystemMessageRequest | C
 const PRODUCTION_MODELS = [
 	{
 		id: "llama-4-scout-17b-16e-instruct",
-		name: "Llama 4 Scout",
+		name: "Llama 4 Scout (deprecated)",
 		detail: "~2,600 tokens/sec",
 		maxInputTokens: 32000, // 32k for paid tiers, 8k for free tier
 		maxOutputTokens: 8000,
@@ -63,8 +63,18 @@ const PRODUCTION_MODELS = [
 // Preview models
 const PREVIEW_MODELS = [
 	{
+		id: "zai-glm-4.6",
+		name: "GLM 4.6 (preview)",
+		maxInputTokens: 128000, // 128k for paid tiers, 64k for free tier
+		maxOutputTokens: 40000,
+		toolCalling: true,
+		supportsParallelToolCalls: false,
+		temperature: 1.0,
+		top_p: 0.95,
+	},
+	{
 		id: "qwen-3-coder-480b",
-		name: "Qwen 3 480B Coder",
+		name: "Qwen 3 480B Coder (deprecated)",
 		detail: "~2,000 tokens/sec",
 		maxInputTokens: 128000, // 128k for paid tiers, 64k for free tier
 		maxOutputTokens: 2000,
@@ -84,7 +94,7 @@ const PREVIEW_MODELS = [
 	},
 	{
 		id: "qwen-3-235b-a22b-thinking-2507",
-		name: "Qwen 3 235B Thinking",
+		name: "Qwen 3 235B Thinking (deprecated)",
 		detail: "~1,700 tokens/sec",
 		maxInputTokens: 128000, // 128k for paid tiers, 65k for free tier
 		maxOutputTokens: 64000,
