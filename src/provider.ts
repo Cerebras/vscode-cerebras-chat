@@ -65,8 +65,9 @@ const PREVIEW_MODELS = [
 	{
 		id: "zai-glm-4.6",
 		name: "GLM 4.6 (preview)",
-		maxInputTokens: 128000, // 128k for paid tiers, 64k for free tier
-		maxOutputTokens: 40000,
+		detail: "up to 1,000 tokens/sec",
+		maxInputTokens: 131072, // 131k for paid tiers, 64k for free tier
+		maxOutputTokens: 40960,
 		toolCalling: true,
 		supportsParallelToolCalls: false,
 		temperature: 1.0,
