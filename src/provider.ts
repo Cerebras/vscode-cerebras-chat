@@ -2,6 +2,8 @@ import { CancellationToken, ExtensionContext, InputBoxValidationSeverity, Langua
 import { Cerebras } from "@cerebras/cerebras_cloud_sdk";
 import { ChatCompletionCreateParams, ChatCompletionCreateParamsStreaming } from "@cerebras/cerebras_cloud_sdk/src/resources/chat/index.js";
 import { get_encoding, Tiktoken } from "tiktoken";
+import { RateLimitHandler } from "./rateLimitHandler";
+import { ChatCompletionStreamChunk } from "./chatCompletionStreamChunk";
 
 
 type ChatCompletionMessage = ChatCompletionCreateParams.SystemMessageRequest | ChatCompletionCreateParams.ToolMessageRequest | ChatCompletionCreateParams.AssistantMessageRequest | ChatCompletionCreateParams.UserMessageRequest;
@@ -115,6 +117,7 @@ interface CerebrasModel {
 	supportsParallelToolCalls: boolean;
 	hasMultiTurnToolLimitations?: boolean;
 	supportsReasoningEffort?: boolean;
+	supportsThinking?: boolean;
 }
 
 function getChatModelInfo(model: CerebrasModel): LanguageModelChatInformation {
@@ -139,6 +142,7 @@ const THINK_DELIMITER = '</think>';
 export class CerebrasChatModelProvider implements LanguageModelChatProvider {
 	private client: Cerebras | null = null;
 	private tokenizer: Tiktoken | null = null;
+	private rateLimitHandler = new RateLimitHandler();
 
 	constructor(private readonly context: ExtensionContext) { }
 
@@ -311,64 +315,42 @@ export class CerebrasChatModelProvider implements LanguageModelChatProvider {
 			requestOptions.tools = cerebrasTools;
 		}
 
-		const chatCompletion = await this.client.chat.completions.create(requestOptions);
+		const maxRateLimitRetries = 5;
+		let attempt = 0;
 
-		// Reset text buffer at the start of each response
-		let thinkingBuffer: string | null = '';
-
-		// Process streaming response
-		for await (const chunk of chatCompletion) {
-			// Check if the operation was cancelled
-			if (token.isCancellationRequested) {
-				break;
+		while (!token.isCancellationRequested) {
+			const canProceed = await this.rateLimitHandler.waitForRateLimit(progress, token);
+			if (!canProceed) {
+				return;
 			}
 
-			// Report the response chunk
-			if (Array.isArray(chunk.choices) && chunk.choices.length > 0) {
-				const choice = chunk.choices[0];
-				const delta = choice.delta;
-
-				// Handle text content with buffering logic
-				if (delta?.content) {
-					if (!foundModel.supportsThinking || thinkingBuffer === null) {
-						// If thinking is not supported for this model, we can process the content directly
-						progress.report(new LanguageModelTextPart(delta.content));
-					} else {
-						// Accumulate content in buffer
-						thinkingBuffer += delta.content;
-
-						// Check if buffer contains the delimiter
-						const delimiterIndex = thinkingBuffer.indexOf(THINK_DELIMITER);
-						if (delimiterIndex !== -1) {
-							// Report only the text after the delimiter
-							const textAfterDelimiter = thinkingBuffer.substring(delimiterIndex + THINK_DELIMITER.length).trim();
-							if (textAfterDelimiter) {
-								progress.report(new LanguageModelTextPart(textAfterDelimiter));
-							}
-							// Clear the buffer after processing
-							thinkingBuffer = null;
-						}
-					}
+			try {
+				const chatCompletion = await this.client.chat.completions.create(requestOptions) as AsyncIterable<ChatCompletionStreamChunk>;
+				this.rateLimitHandler.setRateLimitResumeAt(null); // Clear rate limit on success
+				await this.streamChatCompletion(chatCompletion, foundModel, progress, token);
+				return;
+			} catch (error) {
+				if (this.rateLimitHandler.isDailyTokenLimitError(error)) {
+					this.rateLimitHandler.reportDailyTokenLimit(progress, error);
+					return;
+				}
+				// Only retry on rate limit errors, propagate all others
+				if (!this.rateLimitHandler.isRateLimitError(error)) {
+					throw error;
 				}
 
-				// Handle tool calls
-				if (delta?.tool_calls) {
-					for (const toolCall of delta.tool_calls) {
-						if (toolCall.function?.name && toolCall.function?.arguments && toolCall.id) {
-							try {
-								const parsedArgs = JSON.parse(toolCall.function.arguments);
-								progress.report(new LanguageModelToolCallPart(
-									toolCall.id,
-									toolCall.function.name,
-									parsedArgs
-								));
-							} catch (e) {
-								// If arguments can't be parsed, skip this tool call
-								console.warn('Failed to parse tool call arguments:', e);
-							}
-						}
-					}
+				attempt += 1;
+				if (attempt > maxRateLimitRetries) {
+					console.error(`Cerebras rate limit: Max retries (${maxRateLimitRetries}) exceeded.`);
+					throw error;
 				}
+
+				const retryDelayMs = this.rateLimitHandler.extractRetryAfterMillis(error) ?? this.rateLimitHandler.calculateBackoffDelay(attempt);
+				this.rateLimitHandler.setRateLimitResumeAt(Date.now() + retryDelayMs);
+
+				const retrySeconds = Math.ceil(retryDelayMs / 1000);
+				console.warn(`Cerebras rate limit hit (attempt ${attempt}/${maxRateLimitRetries}). Waiting ${retrySeconds}s before retry.`);
+				// Continue to next iteration which will wait via waitForRateLimit
 			}
 		}
 	}
@@ -406,6 +388,64 @@ export class CerebrasChatModelProvider implements LanguageModelChatProvider {
 		const tokens = this.tokenizer.encode(textContent);
 		this.tokenizer.free(); // Free associated memory
 		return tokens.length;
+	}
+
+	private async streamChatCompletion(chatCompletion: AsyncIterable<ChatCompletionStreamChunk>, foundModel: CerebrasModel, progress: Progress<LanguageModelResponsePart>, token: CancellationToken): Promise<void> {
+		let thinkingBuffer: string | null = '';
+
+		// Process streaming response
+		for await (const chunk of chatCompletion) {
+			// Check if the operation was cancelled
+			if (token.isCancellationRequested) {
+				break;
+			}
+
+			// Report the response chunk
+			if (Array.isArray(chunk.choices) && chunk.choices.length > 0) {
+				const choice = chunk.choices[0];
+				const delta = choice.delta;
+
+				// Handle text content with buffering logic
+				if (delta?.content) {
+					if (!foundModel.supportsThinking || thinkingBuffer === null) {
+						// If thinking is not supported for this model, we can process the content directly
+						progress.report(new LanguageModelTextPart(delta.content));
+					} else {
+						// Accumulate content in buffer
+						thinkingBuffer += delta.content;
+						const delimiterIndex = thinkingBuffer.indexOf(THINK_DELIMITER);
+						if (delimiterIndex !== -1) {
+							// Report only the text after the delimiter
+							const textAfterDelimiter = thinkingBuffer.substring(delimiterIndex + THINK_DELIMITER.length).trim();
+							if (textAfterDelimiter) {
+								progress.report(new LanguageModelTextPart(textAfterDelimiter));
+							}
+							// Clear the buffer after processing
+							thinkingBuffer = null;
+						}
+					}
+				}
+
+				// Handle tool calls
+				if (delta?.tool_calls) {
+					for (const toolCall of delta.tool_calls) {
+						if (toolCall.function?.name && toolCall.function?.arguments && toolCall.id) {
+							try {
+								const parsedArgs = JSON.parse(toolCall.function.arguments);
+								progress.report(new LanguageModelToolCallPart(
+									toolCall.id,
+									toolCall.function.name,
+									parsedArgs
+								));
+							} catch (e) {
+								// If arguments can't be parsed, skip this tool call
+								console.warn('Failed to parse tool call arguments:', e);
+							}
+						}
+					}
+				}
+			}
+		}
 	}
 }
 
