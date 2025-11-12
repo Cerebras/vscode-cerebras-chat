@@ -325,9 +325,13 @@ export class CerebrasChatModelProvider implements LanguageModelChatProvider {
 			}
 
 			try {
-				const chatCompletion = await this.client.chat.completions.create(requestOptions) as AsyncIterable<ChatCompletionStreamChunk>;
+				const chatCompletionRaw = await this.client.chat.completions.create(requestOptions);
+				// The SDK's typings are broader than the streaming payload we rely on; confirm iterator shape at runtime.
+				if (!this.isChatCompletionStream(chatCompletionRaw)) {
+					throw new Error("Cerebras chat completions response is not a streaming iterable");
+				}
 				this.rateLimitHandler.setRateLimitResumeAt(null); // Clear rate limit on success
-				await this.streamChatCompletion(chatCompletion, foundModel, progress, token);
+				await this.streamChatCompletion(chatCompletionRaw, foundModel, progress, token);
 				return;
 			} catch (error) {
 				if (this.rateLimitHandler.isDailyTokenLimitError(error)) {
@@ -388,6 +392,15 @@ export class CerebrasChatModelProvider implements LanguageModelChatProvider {
 		const tokens = this.tokenizer.encode(textContent);
 		this.tokenizer.free(); // Free associated memory
 		return tokens.length;
+	}
+
+	private isChatCompletionStream(value: unknown): value is AsyncIterable<ChatCompletionStreamChunk> {
+		if (!value || typeof value !== "object") {
+			return false;
+		}
+
+		const asyncIterator = (value as AsyncIterable<unknown>)[Symbol.asyncIterator];
+		return typeof asyncIterator === "function";
 	}
 
 	private async streamChatCompletion(chatCompletion: AsyncIterable<ChatCompletionStreamChunk>, foundModel: CerebrasModel, progress: Progress<LanguageModelResponsePart>, token: CancellationToken): Promise<void> {

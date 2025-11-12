@@ -70,6 +70,7 @@ export class RateLimitHandler {
 	 * - x-ratelimit-reset-tokens-minute: seconds until per-minute token limit resets
 	 *
 	 * Returns null if no retry-after information is found.
+	 * @returns {number | null} The delay in milliseconds, or null if retry metadata is unavailable.
 	 */
 	extractRetryAfterMillis(error: RateLimitError | APIError): number | null {
 		const headers = error.headers ?? {};
@@ -156,7 +157,7 @@ export class RateLimitHandler {
 	/**
 	 * Calculates exponential backoff delay with jitter.
 	 * @param attempt The 1-based retry attempt count.
-	 * @returns Delay in milliseconds capped by TIMING.MAX_BACKOFF_MS.
+	 * @returns {number} Delay in milliseconds capped by TIMING.MAX_BACKOFF_MS.
 	 */
 	calculateBackoffDelay(attempt: number): number {
 		const jitterMs = Math.random() * TIMING.MAX_JITTER_MS;
