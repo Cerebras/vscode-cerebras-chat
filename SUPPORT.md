@@ -46,21 +46,19 @@ When filing an issue, please include:
 
 ### What models are supported?
 
-In agent mode, Qwen 3 480B Coder is supported.
+In agent mode, Z.ai GLM 4.6 is supported.
 
 In chat mode, the extension supports:
 
 Production models:
-- Llama 4 Scout
 - Llama 3.1 8B
 - Llama 3.3 70B
 - OpenAI GPT OSS
 - Qwen 3 32B
 
 Preview models:
-- Qwen 3 480B Coder
 - Qwen 3 235B Instruct
-- Qwen 3 235B Thinking
+- Z.ai GLM 4.6
 
 For detailed information about each model's capabilities and token speeds, please refer to the README.md file.
 

@@ -28,11 +28,9 @@ This extension provides support for **Qwen 3 Coder in agent mode**, as well as t
 | Model | Token Speed |
 |------------|-------------|
 | OpenAI GPT OSS | ~3,000 tokens/sec |
+| Z.ai GLM 4.6 | ~1,000 tokens/sec |
 | Qwen 3 32B | ~2,600 tokens/sec |
-| Qwen 3 480B Coder (Preview) | ~2,000 tokens/sec |
 | Qwen 3 235B Instruct (Preview) | ~1,400 tokens/sec |
-| Qwen 3 235B Thinking (Preview) | ~1,700 tokens/sec |
-| Llama 4 Scout | ~2,600 tokens/sec |
 | Llama 3.1 8B | ~2,200 tokens/sec |
 | Llama 3.3 70B | ~2,100 tokens/sec |
 

@@ -2,6 +2,12 @@
 
 All notable changes to the Cerebras BYOK VS Code extension will be documented in this file.
 
+## `v0.1.17` (2025-11-23)
+
+### Features
+- Removal of llama-4-scout, qwen-3-235b-thinking, qwen-3-480b-coder
+
+
 ## `v0.1.16` (2025-10-29)
 
 ### Features
