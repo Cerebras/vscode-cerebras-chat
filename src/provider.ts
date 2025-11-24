@@ -147,6 +147,9 @@ export class CerebrasChatModelProvider implements LanguageModelChatProvider {
 		void this.context.secrets.store('CEREBRAS_API_KEY', apiKey);
 		this.client = new Cerebras({
 			apiKey: apiKey,
+			defaultHeaders: {
+				'X-Cerebras-3rd-Party-Integration': 'vscode'
+			}
 		});
 
 		return apiKey;
@@ -169,6 +172,9 @@ export class CerebrasChatModelProvider implements LanguageModelChatProvider {
 		} else if (apiKey) {
 			this.client = new Cerebras({
 				apiKey: apiKey,
+				defaultHeaders: {
+					'X-Cerebras-3rd-Party-Integration': 'vscode'
+				}
 			});
 		}
 
