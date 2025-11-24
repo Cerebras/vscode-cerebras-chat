@@ -9,15 +9,6 @@ type ChatCompletionMessage = ChatCompletionCreateParams.SystemMessageRequest | C
 // Production models
 const PRODUCTION_MODELS = [
 	{
-		id: "llama-4-scout-17b-16e-instruct",
-		name: "Llama 4 Scout (deprecated)",
-		detail: "~2,600 tokens/sec",
-		maxInputTokens: 32000, // 32k for paid tiers, 8k for free tier
-		maxOutputTokens: 8000,
-		toolCalling: false,
-		supportsParallelToolCalls: false
-	},
-	{
 		id: "llama3.1-8b",
 		name: "Llama 3.1 8B",
 		detail: "~2,200 tokens/sec",
@@ -74,17 +65,6 @@ const PREVIEW_MODELS = [
 		top_p: 0.95,
 	},
 	{
-		id: "qwen-3-coder-480b",
-		name: "Qwen 3 480B Coder (deprecated)",
-		detail: "~2,000 tokens/sec",
-		maxInputTokens: 128000, // 128k for paid tiers, 64k for free tier
-		maxOutputTokens: 2000,
-		toolCalling: true,
-		supportsParallelToolCalls: false,
-		temperature: 0.7,
-		top_p: 0.8
-	},
-	{
 		id: "qwen-3-235b-a22b-instruct-2507",
 		name: "Qwen 3 235B Instruct",
 		detail: "~1,400 tokens/sec",
@@ -92,17 +72,6 @@ const PREVIEW_MODELS = [
 		maxOutputTokens: 1400,
 		toolCalling: false,
 		supportsParallelToolCalls: false
-	},
-	{
-		id: "qwen-3-235b-a22b-thinking-2507",
-		name: "Qwen 3 235B Thinking (deprecated)",
-		detail: "~1,700 tokens/sec",
-		maxInputTokens: 128000, // 128k for paid tiers, 65k for free tier
-		maxOutputTokens: 64000,
-		toolCalling: false,
-		supportsReasoningEffort: false,
-		supportsThinking: true,
-		supportsParallelToolCalls: true
 	}
 ];
 
