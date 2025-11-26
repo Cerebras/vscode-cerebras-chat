@@ -56,10 +56,11 @@ const PREVIEW_MODELS = [
 	{
 		id: "zai-glm-4.6",
 		name: "GLM 4.6 (preview)",
-		detail: "up to 1,000 tokens/sec",
+		detail: "~1,000 tokens/sec",
 		maxInputTokens: 131072, // 131k for paid tiers, 64k for free tier
 		maxOutputTokens: 40960,
 		toolCalling: true,
+		supportsThinking: false,
 		supportsParallelToolCalls: false,
 		temperature: 1.0,
 		top_p: 0.95,
@@ -273,7 +274,6 @@ export class CerebrasChatModelProvider implements LanguageModelChatProvider {
 
 		// Create chat completion request options
 		const requestOptions: ChatCompletionCreateParamsStreaming = {
-			...(foundModel.supportsReasoningEffort ? { reasoning_effort: 'medium' } : {}),
 			model: model.id,
 			messages: cerebrasMessages,
 			max_completion_tokens: model.maxOutputTokens,
