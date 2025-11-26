@@ -23,7 +23,7 @@ Here's how you can use Cerebras models in VS Code:
 
 ### Supported Models
 
-This extension provides support for **Qwen 3 Coder in agent mode**, as well as the following models in chat mode:
+This extension provides support for **GLM 4.6 in agent mode**, as well as the following models in chat mode:
 
 | Model | Token Speed |
 |------------|-------------|
@@ -37,7 +37,7 @@ This extension provides support for **Qwen 3 Coder in agent mode**, as well as t
 ### Advanced Tips
 
 Here's how you can accomplish more with Cerebras:
-* Get higher rate limits on Qwen 3 Coder with our [Cerebras Code](https://www.cerebras.ai/blog/introducing-cerebras-code) plans, starting at $50/month.
+* Get higher rate limits on GLM 4.6 with our [Cerebras Code](https://www.cerebras.ai/blog/introducing-cerebras-code) plans, starting at $50/month.
 * Generate code at top speed with Cerebras by installing the [Cerebras Code MCP server](https://inference-docs.cerebras.ai/integrations/code-mcp).
 * Read our [developer documentation](https://inference-docs.cerebras.ai/) to turbocharge your own AI products using Cerebras' Inference API.
 
