@@ -6,14 +6,37 @@ import { get_encoding, Tiktoken } from "tiktoken";
 
 type ChatCompletionMessage = ChatCompletionCreateParams.SystemMessageRequest | ChatCompletionCreateParams.ToolMessageRequest | ChatCompletionCreateParams.AssistantMessageRequest | ChatCompletionCreateParams.UserMessageRequest;
 
+interface CerebrasModel {
+	id: string;
+	name: string;
+	detail?: string;
+	maxInputTokens: number;
+	maxOutputTokens: number;
+	defaultCompletionTokens: number;
+	toolCalling: boolean;
+	supportsParallelToolCalls: boolean;
+	hasMultiTurnToolLimitations?: boolean;
+	supportsReasoningEffort?: boolean;
+	supportsThinking?: boolean;
+	temperature?: number;
+	top_p?: number;
+}
+
+// Default completion tokens for rate limiting optimization
+// Using conservative defaults prevents premature rate limiting when agentic tools
+// set max_completion_tokens to model maximum. The rate limiter estimates quota
+// based on max_completion_tokens upfront, not actual usage.
+const DEFAULT_COMPLETION_TOKENS = 8192;
+
 // Production models
-const PRODUCTION_MODELS = [
+const PRODUCTION_MODELS: CerebrasModel[] = [
 	{
 		id: "llama3.1-8b",
 		name: "Llama 3.1 8B",
 		detail: "~2,200 tokens/sec",
-		maxInputTokens: 32000, // 32k for paid tiers, 8k for free tier
-		maxOutputTokens: 8000,
+		maxInputTokens: 32768,
+		maxOutputTokens: 8192,
+		defaultCompletionTokens: DEFAULT_COMPLETION_TOKENS,
 		toolCalling: false,
 		supportsParallelToolCalls: false
 	},
@@ -21,8 +44,9 @@ const PRODUCTION_MODELS = [
 		id: "llama-3.3-70b",
 		name: "Llama 3.3 70B",
 		detail: "~2,100 tokens/sec",
-		maxInputTokens: 128000, // 128k for paid tiers, 65k for free tier
-		maxOutputTokens: 8000,
+		maxInputTokens: 131072, // 131k for paid tiers, 65k for free tier
+		maxOutputTokens: 65536,
+		defaultCompletionTokens: DEFAULT_COMPLETION_TOKENS,
 		toolCalling: false,
 		supportsParallelToolCalls: true,
 	},
@@ -32,6 +56,7 @@ const PRODUCTION_MODELS = [
 		detail: "~3,000 tokens/sec",
 		maxInputTokens: 131000, // 131k for paid tiers, 64k for free tier
 		maxOutputTokens: 64000,
+		defaultCompletionTokens: DEFAULT_COMPLETION_TOKENS,
 		toolCalling: false,
 		supportsReasoningEffort: true,
 		supportsParallelToolCalls: false,
@@ -43,50 +68,41 @@ const PRODUCTION_MODELS = [
 		maxInputTokens: 128000, // 128k for paid tiers, 64k for free tier
 		supportsThinking: true,
 		maxOutputTokens: 8000,
+		defaultCompletionTokens: DEFAULT_COMPLETION_TOKENS,
 		toolCalling: false,
 		supportsReasoningEffort: false,
 		supportsParallelToolCalls: false,
 		temperature: 0.6,
 		top_p: 0.95
-	}
-];
-
-// Preview models
-const PREVIEW_MODELS = [
+	},
 	{
 		id: "zai-glm-4.6",
-		name: "GLM 4.6 (preview)",
+		name: "Z.ai GLM 4.6 (preview)",
 		detail: "~1,000 tokens/sec",
 		maxInputTokens: 131072, // 131k for paid tiers, 64k for free tier
 		maxOutputTokens: 40960,
+		defaultCompletionTokens: DEFAULT_COMPLETION_TOKENS,
 		toolCalling: true,
 		supportsThinking: false,
 		supportsParallelToolCalls: false,
 		temperature: 1.0,
 		top_p: 0.95,
-	},
+	}
+];
+
+// Preview models
+const PREVIEW_MODELS: CerebrasModel[] = [
 	{
 		id: "qwen-3-235b-a22b-instruct-2507",
-		name: "Qwen 3 235B Instruct",
+		name: "Qwen 3 235B Instruct (preview)",
 		detail: "~1,400 tokens/sec",
 		maxInputTokens: 131000, // 131k for paid tiers, 64k for free tier
-		maxOutputTokens: 1400,
+		maxOutputTokens: 40960,
+		defaultCompletionTokens: DEFAULT_COMPLETION_TOKENS,
 		toolCalling: false,
 		supportsParallelToolCalls: false
 	}
 ];
-
-interface CerebrasModel {
-	id: string;
-	name: string;
-	detail?: string;
-	maxInputTokens: number;
-	maxOutputTokens: number;
-	toolCalling: boolean;
-	supportsParallelToolCalls: boolean;
-	hasMultiTurnToolLimitations?: boolean;
-	supportsReasoningEffort?: boolean;
-}
 
 function getChatModelInfo(model: CerebrasModel): LanguageModelChatInformation {
 	return {
@@ -273,10 +289,13 @@ export class CerebrasChatModelProvider implements LanguageModelChatProvider {
 		}));
 
 		// Create chat completion request options
+		// Use defaultCompletionTokens instead of maxOutputTokens to prevent
+		// premature rate limiting - Cerebras rate limiter estimates quota based
+		// on max_completion_tokens upfront, not actual usage
 		const requestOptions: ChatCompletionCreateParamsStreaming = {
 			model: model.id,
 			messages: cerebrasMessages,
-			max_completion_tokens: model.maxOutputTokens,
+			max_completion_tokens: foundModel.defaultCompletionTokens,
 			stream: true,
 			temperature: foundModel.temperature ?? 0.1,
 			top_p: foundModel.top_p ?? undefined,
