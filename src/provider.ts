@@ -77,7 +77,7 @@ const PRODUCTION_MODELS: CerebrasModel[] = [
 	},
 	{
 		id: "zai-glm-4.6",
-		name: "Z.ai GLM 4.6",
+		name: "Z.ai GLM 4.6 (preview)",
 		detail: "~1,000 tokens/sec",
 		maxInputTokens: 131072, // 131k for paid tiers, 64k for free tier
 		maxOutputTokens: 40960,
