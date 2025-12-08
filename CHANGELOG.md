@@ -12,7 +12,6 @@ All notable changes to the Cerebras BYOK VS Code extension will be documented in
 ### Fixes
 - Update `llama-3.3-70b`: maxInputTokens to 131072, maxOutputTokens to 65536
 - Update `qwen-3-235b-a22b-instruct-2507`: maxOutputTokens to 40960
-- Promote `zai-glm-4.6` from preview to production
 
 ## `v0.1.17` (2025-11-23)
 
