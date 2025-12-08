@@ -2,7 +2,7 @@
 
 All notable changes to the Cerebras BYOK VS Code extension will be documented in this file.
 
-## `v0.1.18` (2025-12-03)
+## `v0.1.18` (2025-12-08)
 
 ### Features
 - Use conservative `max_completion_tokens` defaults (8192) to prevent premature rate limiting
