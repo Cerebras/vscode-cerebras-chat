@@ -93,6 +93,19 @@ const PRODUCTION_MODELS: CerebrasModel[] = [
 // Preview models
 const PREVIEW_MODELS: CerebrasModel[] = [
 	{
+		id: "zai-glm-4.7",
+		name: "GLM 4.7 (preview)",
+		detail: "~1,000 tokens/sec",
+		maxInputTokens: 131072, // 131k for paid tiers, 64k for free tier
+		maxOutputTokens: 40960,
+		defaultCompletionTokens: DEFAULT_COMPLETION_TOKENS,
+		toolCalling: true,
+		supportsThinking: false,
+		supportsParallelToolCalls: false,
+		temperature: 1.0,
+		top_p: 0.95,
+	},
+	{
 		id: "qwen-3-235b-a22b-instruct-2507",
 		name: "Qwen 3 235B Instruct (preview)",
 		detail: "~1,400 tokens/sec",
