@@ -28,6 +28,7 @@ This extension provides support for **GLM 4.6 in agent mode**, as well as the fo
 | Model | Token Speed |
 |------------|-------------|
 | OpenAI GPT OSS | ~3,000 tokens/sec |
+| Z.ai GLM 4.7 | ~1,000 tokens/sec |
 | Z.ai GLM 4.6 | ~1,000 tokens/sec |
 | Qwen 3 32B | ~2,600 tokens/sec |
 | Qwen 3 235B Instruct (Preview) | ~1,400 tokens/sec |
