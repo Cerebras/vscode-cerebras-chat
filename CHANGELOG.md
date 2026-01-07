@@ -2,6 +2,11 @@
 
 All notable changes to the Cerebras BYOK VS Code extension will be documented in this file.
 
+## `v0.1.19` (Unreleased)
+
+### Features
+- Add GLM 4.7 (preview)
+
 ## `v0.1.18` (2025-12-08)
 
 ### Features

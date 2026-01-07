@@ -26,7 +26,7 @@ interface CerebrasModel {
 // Using conservative defaults prevents premature rate limiting when agentic tools
 // set max_completion_tokens to model maximum. The rate limiter estimates quota
 // based on max_completion_tokens upfront, not actual usage.
-const DEFAULT_COMPLETION_TOKENS = 8192;
+const DEFAULT_COMPLETION_TOKENS = 16384;
 
 // Production models
 const PRODUCTION_MODELS: CerebrasModel[] = [
@@ -78,6 +78,19 @@ const PRODUCTION_MODELS: CerebrasModel[] = [
 	{
 		id: "zai-glm-4.6",
 		name: "Z.ai GLM 4.6 (preview)",
+		detail: "~1,000 tokens/sec",
+		maxInputTokens: 131072, // 131k for paid tiers, 64k for free tier
+		maxOutputTokens: 40960,
+		defaultCompletionTokens: DEFAULT_COMPLETION_TOKENS,
+		toolCalling: true,
+		supportsThinking: false,
+		supportsParallelToolCalls: false,
+		temperature: 1.0,
+		top_p: 0.95,
+	},
+	{
+		id: "zai-glm-4.7",
+		name: "Z.ai GLM 4.7 (preview)",
 		detail: "~1,000 tokens/sec",
 		maxInputTokens: 131072, // 131k for paid tiers, 64k for free tier
 		maxOutputTokens: 40960,
