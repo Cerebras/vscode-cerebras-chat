@@ -1,4 +1,4 @@
-import { CancellationToken, ExtensionContext, InputBoxValidationSeverity, LanguageModelChatInformation, LanguageModelChatMessage, LanguageModelChatMessageRole, LanguageModelChatProvider, LanguageModelResponsePart, LanguageModelTextPart, LanguageModelToolCallPart, LanguageModelToolResultPart, Progress, ProvideLanguageModelChatResponseOptions, window } from "vscode";
+import { CancellationToken, Disposable, ExtensionContext, InputBoxValidationSeverity, LanguageModelChatInformation, LanguageModelChatMessage, LanguageModelChatMessageRole, LanguageModelChatProvider, LanguageModelResponsePart, LanguageModelTextPart, LanguageModelToolCallPart, LanguageModelToolResultPart, Progress, ProvideLanguageModelChatResponseOptions, window } from "vscode";
 import { Cerebras } from "@cerebras/cerebras_cloud_sdk";
 import { ChatCompletionCreateParams, ChatCompletionCreateParamsStreaming } from "@cerebras/cerebras_cloud_sdk/src/resources/chat/index.js";
 import { get_encoding, Tiktoken } from "tiktoken";
@@ -136,7 +136,7 @@ function getChatModelInfo(model: CerebrasModel): LanguageModelChatInformation {
 
 const THINK_DELIMITER = '</think>';
 
-export class CerebrasChatModelProvider implements LanguageModelChatProvider {
+export class CerebrasChatModelProvider implements LanguageModelChatProvider, Disposable {
 	private client: Cerebras | null = null;
 	private tokenizer: Tiktoken | null = null;
 
@@ -412,8 +412,17 @@ export class CerebrasChatModelProvider implements LanguageModelChatProvider {
 		}
 
 		const tokens = this.tokenizer.encode(textContent);
-		this.tokenizer.free(); // Free associated memory
 		return tokens.length;
+	}
+
+	/**
+	 * Dispose of resources, VS Code automatically calls dispose() on all registered disposables when the extension deactivates.
+	 */
+	dispose(): void {
+		if (this.tokenizer) {
+			this.tokenizer.free();
+			this.tokenizer = null;
+		}
 	}
 }
 
