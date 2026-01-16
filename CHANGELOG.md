@@ -2,6 +2,11 @@
 
 All notable changes to the Cerebras BYOK VS Code extension will be documented in this file.
 
+## `v0.1.19` (2026-01-15)
+
+### Fixes
+- Dispose tiktoken tokenizer when `CerebrasChatModelProvider` is disposed (thanks, [@eleanorjboyd](https://github.com/eleanorjboyd)!)
+
 ## `v0.1.18` (2026-01-02)
 
 ### Features
