@@ -1,4 +1,4 @@
-import { CancellationToken, ExtensionContext, InputBoxValidationSeverity, LanguageModelChatInformation, LanguageModelChatMessage, LanguageModelChatMessageRole, LanguageModelChatProvider, LanguageModelResponsePart, LanguageModelTextPart, LanguageModelToolCallPart, LanguageModelToolResultPart, Progress, ProvideLanguageModelChatResponseOptions, window } from "vscode";
+import { CancellationToken, Disposable, ExtensionContext, InputBoxValidationSeverity, LanguageModelChatInformation, LanguageModelChatMessage, LanguageModelChatMessageRole, LanguageModelChatProvider, LanguageModelResponsePart, LanguageModelTextPart, LanguageModelToolCallPart, LanguageModelToolResultPart, Progress, ProvideLanguageModelChatResponseOptions, window } from "vscode";
 import { Cerebras } from "@cerebras/cerebras_cloud_sdk";
 import { ChatCompletionCreateParams, ChatCompletionCreateParamsStreaming } from "@cerebras/cerebras_cloud_sdk/src/resources/chat/index.js";
 import { get_encoding, Tiktoken } from "tiktoken";
@@ -80,6 +80,19 @@ const PRODUCTION_MODELS: CerebrasModel[] = [
 // Preview models
 const PREVIEW_MODELS: CerebrasModel[] = [
 	{
+		id: "zai-glm-4.7",
+		name: "GLM 4.7 (preview)",
+		detail: "~1,000 tokens/sec",
+		maxInputTokens: 131072, // 131k for paid tiers, 64k for free tier
+		maxOutputTokens: 40960,
+		defaultCompletionTokens: DEFAULT_COMPLETION_TOKENS,
+		toolCalling: true,
+		supportsThinking: false,
+		supportsParallelToolCalls: false,
+		temperature: 1.0,
+		top_p: 0.95,
+	},
+	{
 		id: "qwen-3-235b-a22b-instruct-2507",
 		name: "Qwen 3 235B Instruct (preview)",
 		detail: "~1,400 tokens/sec",
@@ -110,7 +123,7 @@ function getChatModelInfo(model: CerebrasModel): LanguageModelChatInformation {
 
 const THINK_DELIMITER = '</think>';
 
-export class CerebrasChatModelProvider implements LanguageModelChatProvider {
+export class CerebrasChatModelProvider implements LanguageModelChatProvider, Disposable {
 	private client: Cerebras | null = null;
 	private tokenizer: Tiktoken | null = null;
 
@@ -386,8 +399,17 @@ export class CerebrasChatModelProvider implements LanguageModelChatProvider {
 		}
 
 		const tokens = this.tokenizer.encode(textContent);
-		this.tokenizer.free(); // Free associated memory
 		return tokens.length;
+	}
+
+	/**
+	 * Dispose of resources, VS Code automatically calls dispose() on all registered disposables when the extension deactivates.
+	 */
+	dispose(): void {
+		if (this.tokenizer) {
+			this.tokenizer.free();
+			this.tokenizer = null;
+		}
 	}
 }
 

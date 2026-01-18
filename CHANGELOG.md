@@ -2,9 +2,15 @@
 
 All notable changes to the Cerebras BYOK VS Code extension will be documented in this file.
 
-## `v0.1.18` (2025-12-08)
+## `v0.1.19` (2026-01-15)
+
+### Fixes
+- Dispose tiktoken tokenizer when `CerebrasChatModelProvider` is disposed (thanks, [@eleanorjboyd](https://github.com/eleanorjboyd)!)
+
+## `v0.1.18` (2026-01-02)
 
 ### Features
+- Add GLM 4.7 in preview to agent mode
 - Use conservative `max_completion_tokens` defaults (8192) to prevent premature rate limiting
   - Cerebras rate limiter estimates quota based on `max_completion_tokens` upfront, not actual usage
   - Lower defaults preserve rate limit headroom for agentic tools
