@@ -2,6 +2,11 @@
 
 All notable changes to the Cerebras BYOK VS Code extension will be documented in this file.
 
+## `v0.1.20` (2026-01-24)
+
+### Features
+- GLM 4.7 now uses temperature=1.0 and top_p=0.95 for optimal performance
+
 ## `v0.1.19` (2026-01-15)
 
 ### Fixes
