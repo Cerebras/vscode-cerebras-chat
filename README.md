@@ -28,10 +28,8 @@ This extension provides support for **GLM 4.7 in agent mode**, as well as the fo
 |------------|-------------|
 | OpenAI GPT OSS | ~3,000 tokens/sec |
 | Z.ai GLM 4.7 | ~1,000 tokens/sec |
-| Qwen 3 32B | ~2,600 tokens/sec |
 | Qwen 3 235B Instruct (Preview) | ~1,400 tokens/sec |
 | Llama 3.1 8B | ~2,200 tokens/sec |
-| Llama 3.3 70B | ~2,100 tokens/sec |
 
 ### Advanced Tips
 

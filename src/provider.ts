@@ -41,16 +41,6 @@ const PRODUCTION_MODELS: CerebrasModel[] = [
 		supportsParallelToolCalls: false
 	},
 	{
-		id: "llama-3.3-70b",
-		name: "Llama 3.3 70B",
-		detail: "~2,100 tokens/sec",
-		maxInputTokens: 131072, // 131k for paid tiers, 65k for free tier
-		maxOutputTokens: 65536,
-		defaultCompletionTokens: DEFAULT_COMPLETION_TOKENS,
-		toolCalling: false,
-		supportsParallelToolCalls: true,
-	},
-	{
 		id: "gpt-oss-120b",
 		name: "OpenAI GPT OSS",
 		detail: "~3,000 tokens/sec",
@@ -61,20 +51,6 @@ const PRODUCTION_MODELS: CerebrasModel[] = [
 		supportsReasoningEffort: true,
 		supportsParallelToolCalls: false,
 	},
-	{
-		id: "qwen-3-32b",
-		name: "Qwen 3 32B",
-		detail: "~2,600 tokens/sec",
-		maxInputTokens: 128000, // 128k for paid tiers, 64k for free tier
-		supportsThinking: true,
-		maxOutputTokens: 8000,
-		defaultCompletionTokens: DEFAULT_COMPLETION_TOKENS,
-		toolCalling: false,
-		supportsReasoningEffort: false,
-		supportsParallelToolCalls: false,
-		temperature: 0.6,
-		top_p: 0.95
-	}
 ];
 
 // Preview models
