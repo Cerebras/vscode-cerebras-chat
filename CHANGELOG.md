@@ -2,6 +2,11 @@
 
 All notable changes to the Cerebras BYOK VS Code extension will be documented in this file.
 
+## `v0.1.20` (2026-02-15)
+
+### Features
+- Deprecate and remove `llama-3.3-70b` and `qwen-3-32b` models
+
 ## `v0.1.19` (2026-01-15)
 
 ### Fixes
