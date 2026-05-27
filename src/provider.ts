@@ -31,16 +31,6 @@ const DEFAULT_COMPLETION_TOKENS = 8192;
 // Production models
 const PRODUCTION_MODELS: CerebrasModel[] = [
 	{
-		id: "llama3.1-8b",
-		name: "Llama 3.1 8B",
-		detail: "~2,200 tokens/sec",
-		maxInputTokens: 32768,
-		maxOutputTokens: 8192,
-		defaultCompletionTokens: DEFAULT_COMPLETION_TOKENS,
-		toolCalling: false,
-		supportsParallelToolCalls: false
-	},
-	{
 		id: "gpt-oss-120b",
 		name: "OpenAI GPT OSS",
 		detail: "~3,000 tokens/sec",
@@ -68,16 +58,6 @@ const PREVIEW_MODELS: CerebrasModel[] = [
 		temperature: 1.0,
 		top_p: 0.95,
 	},
-	{
-		id: "qwen-3-235b-a22b-instruct-2507",
-		name: "Qwen 3 235B Instruct (preview)",
-		detail: "~1,400 tokens/sec",
-		maxInputTokens: 131000, // 131k for paid tiers, 64k for free tier
-		maxOutputTokens: 40960,
-		defaultCompletionTokens: DEFAULT_COMPLETION_TOKENS,
-		toolCalling: false,
-		supportsParallelToolCalls: false
-	}
 ];
 
 function getChatModelInfo(model: CerebrasModel): LanguageModelChatInformation {
