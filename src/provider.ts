@@ -1,10 +1,11 @@
 import { CancellationToken, Disposable, ExtensionContext, InputBoxValidationSeverity, LanguageModelChatInformation, LanguageModelChatMessage, LanguageModelChatMessageRole, LanguageModelChatProvider, LanguageModelDataPart, LanguageModelResponsePart, LanguageModelTextPart, LanguageModelToolCallPart, LanguageModelToolResultPart, Progress, ProvideLanguageModelChatResponseOptions, window } from "vscode";
 import { Cerebras } from "@cerebras/cerebras_cloud_sdk";
-import { ChatCompletionCreateParams, ChatCompletionCreateParamsStreaming } from "@cerebras/cerebras_cloud_sdk/src/resources/chat/index.js";
+import { ChatCompletion, ChatCompletionCreateParams, ChatCompletionCreateParamsStreaming } from "@cerebras/cerebras_cloud_sdk/src/resources/chat/index.js";
 import { get_encoding, Tiktoken } from "tiktoken";
 
 
 type ChatCompletionMessage = ChatCompletionCreateParams.SystemMessageRequest | ChatCompletionCreateParams.ToolMessageRequest | ChatCompletionCreateParams.AssistantMessageRequest | ChatCompletionCreateParams.UserMessageRequest;
+type StreamedToolCallDelta = ChatCompletion.ChatChunkResponse.Choice.Delta.ToolCall;
 
 interface CerebrasModel {
 	id: string;
@@ -80,6 +81,52 @@ function getChatModelInfo(model: CerebrasModel): LanguageModelChatInformation {
 }
 
 const THINK_DELIMITER = '</think>';
+
+interface PendingToolCall {
+	id?: string;
+	name?: string;
+	argumentsText: string;
+}
+
+function appendToolCallDelta(pendingToolCalls: Map<number, PendingToolCall>, toolCall: StreamedToolCallDelta, fallbackIndex: number): void {
+	const toolCallIndex = toolCall.index ?? fallbackIndex;
+	const pendingToolCall = pendingToolCalls.get(toolCallIndex) ?? { argumentsText: '' };
+
+	if (toolCall.id) {
+		pendingToolCall.id = toolCall.id;
+	}
+
+	if (toolCall.function?.name) {
+		pendingToolCall.name = toolCall.function.name;
+	}
+
+	if (toolCall.function?.arguments) {
+		pendingToolCall.argumentsText += toolCall.function.arguments;
+	}
+
+	pendingToolCalls.set(toolCallIndex, pendingToolCall);
+}
+
+function flushPendingToolCalls(pendingToolCalls: Map<number, PendingToolCall>, progress: Progress<LanguageModelResponsePart>): void {
+	for (const [toolCallIndex, pendingToolCall] of pendingToolCalls) {
+		if (!pendingToolCall.id || !pendingToolCall.name) {
+			continue;
+		}
+
+		try {
+			const rawArguments = pendingToolCall.argumentsText.trim();
+			const parsedArguments = rawArguments ? JSON.parse(rawArguments) : {};
+			progress.report(new LanguageModelToolCallPart(
+				pendingToolCall.id,
+				pendingToolCall.name,
+				parsedArguments
+			));
+			pendingToolCalls.delete(toolCallIndex);
+		} catch (error) {
+			console.warn('Failed to parse assembled tool call arguments:', error);
+		}
+	}
+}
 
 export class CerebrasChatModelProvider implements LanguageModelChatProvider, Disposable {
 	private client: Cerebras | null = null;
@@ -288,6 +335,7 @@ export class CerebrasChatModelProvider implements LanguageModelChatProvider, Dis
 
 		// Reset text buffer at the start of each response
 		let thinkingBuffer: string | null = '';
+		const pendingToolCalls = new Map<number, PendingToolCall>();
 
 		// Process streaming response
 		for await (const chunk of chatCompletion) {
@@ -326,22 +374,21 @@ export class CerebrasChatModelProvider implements LanguageModelChatProvider, Dis
 
 				// Handle tool calls
 				if (delta?.tool_calls) {
-					for (const toolCall of delta.tool_calls) {
-						if (toolCall.function?.name && toolCall.function?.arguments && toolCall.id) {
-							try {
-								const parsedArgs = JSON.parse(toolCall.function.arguments);
-								progress.report(new LanguageModelToolCallPart(
-									toolCall.id,
-									toolCall.function.name,
-									parsedArgs
-								));
-							} catch (e) {
-								// If arguments can't be parsed, skip this tool call
-								console.warn('Failed to parse tool call arguments:', e);
-							}
-						}
+					for (const [toolCallIndex, toolCall] of delta.tool_calls.entries()) {
+						appendToolCallDelta(pendingToolCalls, toolCall, toolCallIndex);
 					}
 				}
+
+				if (choice.finish_reason === 'tool_calls') {
+					flushPendingToolCalls(pendingToolCalls, progress);
+				}
+			}
+		}
+
+		if (pendingToolCalls.size > 0) {
+			flushPendingToolCalls(pendingToolCalls, progress);
+			if (pendingToolCalls.size > 0) {
+				console.warn('Incomplete streamed tool call data prevented emission.');
 			}
 		}
 	}
