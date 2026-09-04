@@ -72,11 +72,12 @@ function getChatModelInfo(model: CerebrasModel): LanguageModelChatInformation {
 		maxInputTokens: model.maxInputTokens,
 		maxOutputTokens: model.maxOutputTokens,
 		version: "1.0.0",
+		isUserSelectable: true,
 		capabilities: {
 			toolCalling: model.toolCalling,
 			imageInput: model.imageInput ?? false,
 		}
-	};
+	} as LanguageModelChatInformation & { isUserSelectable: boolean };
 }
 
 const THINK_DELIMITER = '</think>';
