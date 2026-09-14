@@ -26,7 +26,7 @@ This extension provides support for **Qwen 3.8 27B in agent mode**, as well as t
 
 | Model | Release Stage | Token Speed |
 |------------|-------------|-------------|
-| Qwen 3.8 27B | Production | Up to 1,850 tokens/sec |
+| Qwen 3.8 27B | Production | ~1,850 tokens/sec |
 | OpenAI GPT OSS | Production | ~3,000 tokens/sec |
 
 ### Advanced Tips
