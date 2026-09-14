@@ -5,7 +5,7 @@ All notable changes to the Cerebras BYOK VS Code extension will be documented in
 ## `v0.1.23` (2026-09-14)
 
 ### Documentation
-- Document Qwen 3.8 27B performance as up to approximately 1,850 tokens/sec
+- Document Qwen 3.8 27B performance as up to 1,850 tokens/sec
 
 ## `v0.1.22` (2026-09-14)
 
