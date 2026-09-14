@@ -1,11 +1,10 @@
 import { CancellationToken, Disposable, ExtensionContext, InputBoxValidationSeverity, LanguageModelChatInformation, LanguageModelChatMessage, LanguageModelChatMessageRole, LanguageModelChatProvider, LanguageModelChatToolMode, LanguageModelDataPart, LanguageModelResponsePart, LanguageModelTextPart, LanguageModelToolCallPart, LanguageModelToolResultPart, Progress, ProvideLanguageModelChatResponseOptions, window } from "vscode";
 import { Cerebras } from "@cerebras/cerebras_cloud_sdk";
-import { ChatCompletionCreateParams, ChatCompletionCreateParamsStreaming } from "@cerebras/cerebras_cloud_sdk/src/resources/chat/index.js";
+import { ChatCompletionCreateParamsStreaming } from "@cerebras/cerebras_cloud_sdk/src/resources/chat/index.js";
 import { get_encoding, Tiktoken } from "tiktoken";
+import { toCerebrasMessages, type CerebrasMessageInput, type CerebrasMessagePart } from "./messageConversion";
 import { sanitizeCerebrasModelOptions } from "./modelOptions";
 
-
-type ChatCompletionMessage = ChatCompletionCreateParams.SystemMessageRequest | ChatCompletionCreateParams.ToolMessageRequest | ChatCompletionCreateParams.AssistantMessageRequest | ChatCompletionCreateParams.UserMessageRequest;
 
 interface CerebrasModel {
 	id: string;
@@ -81,6 +80,39 @@ function getChatModelInfo(model: CerebrasModel): LanguageModelChatInformation {
 }
 
 const THINK_DELIMITER = '</think>';
+
+function toCerebrasMessageInput(message: LanguageModelChatMessage): CerebrasMessageInput {
+	const content: CerebrasMessagePart[] = [];
+
+	for (const part of message.content) {
+		if (part instanceof LanguageModelTextPart) {
+			content.push({ kind: 'text', value: part.value });
+		} else if (part instanceof LanguageModelDataPart && part.mimeType.startsWith('image/')) {
+			content.push({ kind: 'image', mimeType: part.mimeType, data: part.data });
+		} else if (part instanceof LanguageModelToolCallPart) {
+			content.push({
+				kind: 'tool_call',
+				callId: part.callId,
+				name: part.name,
+				input: part.input,
+			});
+		} else if (part instanceof LanguageModelToolResultPart) {
+			content.push({
+				kind: 'tool_result',
+				callId: part.callId,
+				content: part.content
+					.filter(resultPart => resultPart instanceof LanguageModelTextPart)
+					.map(resultPart => (resultPart as LanguageModelTextPart).value)
+					.join(''),
+			});
+		}
+	}
+
+	return {
+		role: toChatMessageRole(message.role),
+		content,
+	};
+}
 
 export class CerebrasChatModelProvider implements LanguageModelChatProvider, Disposable {
 	private client: Cerebras | null = null;
@@ -186,74 +218,8 @@ export class CerebrasChatModelProvider implements LanguageModelChatProvider, Dis
 			return;
 		}
 
-		// Convert VS Code messages to Cerebras format
-		// Handle text content, tool calls, and tool results
-		const cerebrasMessages: ChatCompletionMessage[] = messages.map(msg => {
-			const textContent: string[] = [];
-			const imageContent: ChatCompletionCreateParams.UserMessageRequest.ImageURLContent[] = [];
-			const toolCalls: ChatCompletionCreateParams.AssistantMessageRequest['tool_calls'] = [];
-			const role = msg.role;
-
-			for (const part of msg.content) {
-				if (part instanceof LanguageModelTextPart) {
-					textContent.push(part.value);
-				} else if (part instanceof LanguageModelDataPart && part.mimeType.startsWith('image/')) {
-					imageContent.push({
-						type: "image_url",
-						image_url: {
-							url: `data:${part.mimeType};base64,${Buffer.from(part.data).toString('base64')}`
-						}
-					});
-				} else if (part instanceof LanguageModelToolCallPart) {
-					toolCalls.push({
-						id: part.callId,
-						type: "function",
-						function: {
-							name: part.name,
-							arguments: JSON.stringify(part.input)
-						}
-					});
-				} else if (part instanceof LanguageModelToolResultPart) {
-					// Tool results should be in user messages
-					const resultContent = part.content
-						.filter(resultPart => resultPart instanceof LanguageModelTextPart)
-						.map(resultPart => (resultPart as LanguageModelTextPart).value)
-						.join('');
-
-					return {
-						role: "tool",
-						content: resultContent,
-						tool_call_id: part.callId
-					} satisfies ChatCompletionCreateParams.ToolMessageRequest;
-				}
-			}
-
-			const messageContent = textContent.join('');
-
-			if (role === LanguageModelChatMessageRole.User && imageContent.length > 0) {
-				return {
-					role: "user",
-					content: [
-						...(messageContent ? [{ type: "text" as const, text: messageContent }] : []),
-						...imageContent
-					]
-				} satisfies ChatCompletionCreateParams.UserMessageRequest;
-			}
-
-			// Return message with tool calls if present
-			if (toolCalls.length > 0) {
-				return {
-					role: "assistant",
-					content: messageContent || '',
-					tool_calls: toolCalls
-				} satisfies ChatCompletionCreateParams.AssistantMessageRequest;
-			}
-
-			return {
-				role: toChatMessageRole(role),
-				content: messageContent
-			} satisfies ChatCompletionMessage;
-		}).filter(msg => (msg.content !== null && msg.content.length > 0) || (msg.role === "tool" || msg.tool_calls));
+		// Convert VS Code messages to Cerebras format while preserving tool-result ordering.
+		const cerebrasMessages = toCerebrasMessages(messages.map(toCerebrasMessageInput));
 
 		// Convert VS Code tools to Cerebras format
 		const cerebrasTools = options.tools?.map(tool => ({
