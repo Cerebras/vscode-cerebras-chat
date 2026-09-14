@@ -10,7 +10,7 @@
 		"type": "git",
 		"url": "https://github.com/cerebras/vscode-cerebras-chat"
 	},
-	"version": "0.1.21",
+	"version": "0.1.22",
 	"engines": {
 		"vscode": "^1.120.0"
 	},
@@ -43,6 +43,7 @@
 		"watch:esbuild": "node esbuild.js --watch",
 		"watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
 		"package": "npm run check-types && npm run lint && node esbuild.js --production",
+		"test": "node --experimental-strip-types --test test/*.test.mjs",
 		"check-types": "tsc --noEmit",
 		"deploy": "vsce publish",
 		"prerelease": "vsce publish --pre-release",

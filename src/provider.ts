@@ -2,10 +2,10 @@ import { CancellationToken, Disposable, ExtensionContext, InputBoxValidationSeve
 import { Cerebras } from "@cerebras/cerebras_cloud_sdk";
 import { ChatCompletionCreateParams, ChatCompletionCreateParamsStreaming } from "@cerebras/cerebras_cloud_sdk/src/resources/chat/index.js";
 import { get_encoding, Tiktoken } from "tiktoken";
+import { sanitizeCerebrasModelOptions } from "./modelOptions";
 
 
 type ChatCompletionMessage = ChatCompletionCreateParams.SystemMessageRequest | ChatCompletionCreateParams.ToolMessageRequest | ChatCompletionCreateParams.AssistantMessageRequest | ChatCompletionCreateParams.UserMessageRequest;
-type CerebrasModelOptions = Partial<ChatCompletionCreateParamsStreaming>;
 
 interface CerebrasModel {
 	id: string;
@@ -269,7 +269,7 @@ export class CerebrasChatModelProvider implements LanguageModelChatProvider, Dis
 		// Use defaultCompletionTokens instead of maxOutputTokens to prevent
 		// premature rate limiting - Cerebras rate limiter estimates quota based
 		// on max_completion_tokens upfront, not actual usage
-		const callerModelOptions = (options.modelOptions ?? {}) as CerebrasModelOptions;
+		const callerModelOptions = sanitizeCerebrasModelOptions(options.modelOptions);
 		const maxCompletionTokens = callerModelOptions.max_completion_tokens !== undefined
 			? callerModelOptions.max_completion_tokens
 			: callerModelOptions.max_tokens !== undefined
@@ -290,6 +290,7 @@ export class CerebrasChatModelProvider implements LanguageModelChatProvider, Dis
 				: foundModel.reasoningEffort,
 			tools: undefined,
 			tool_choice: undefined,
+			parallel_tool_calls: undefined,
 		};
 
 		// Add tools if available

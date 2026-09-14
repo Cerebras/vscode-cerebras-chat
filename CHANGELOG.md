@@ -2,6 +2,11 @@
 
 All notable changes to the Cerebras BYOK VS Code extension will be documented in this file.
 
+## `v0.1.22` (2026-09-14)
+
+### Fixes
+- Filter VS Code-internal model options before sending requests to the Cerebras API
+
 ## `v0.1.21` (2026-09-14)
 
 ### Features
