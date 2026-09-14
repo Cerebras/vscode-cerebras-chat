@@ -22,19 +22,16 @@ Here's how you can use Cerebras models in VS Code:
 
 ### Supported Models
 
-This extension provides support for **GLM 4.7 in agent mode**, as well as the following models in chat mode:
+This extension provides support for **Qwen 3.8 27B in agent mode**, as well as the following models in chat mode. Qwen 3.8 also accepts PNG and JPEG image inputs.
 
-| Model | Token Speed |
-|------------|-------------|
-| OpenAI GPT OSS | ~3,000 tokens/sec |
-| Z.ai GLM 4.7 | ~1,000 tokens/sec |
-| Qwen 3 235B Instruct (Preview) | ~1,400 tokens/sec |
-| Llama 3.1 8B | ~2,200 tokens/sec |
+| Model | Release Stage | Token Speed |
+|------------|-------------|-------------|
+| Qwen 3.8 27B | Production | Not published |
+| OpenAI GPT OSS | Production | ~3,000 tokens/sec |
 
 ### Advanced Tips
 
 Here's how you can accomplish more with Cerebras:
-* Get higher rate limits on GLM 4.7 with our [Cerebras Code](https://www.cerebras.ai/blog/introducing-cerebras-code) plans, starting at $50/month.
 * Generate code at top speed with Cerebras by installing the [Cerebras Code MCP server](https://inference-docs.cerebras.ai/integrations/code-mcp).
 * Read our [developer documentation](https://inference-docs.cerebras.ai/) to turbocharge your own AI products using Cerebras' Inference API.
 

@@ -2,6 +2,19 @@
 
 All notable changes to the Cerebras BYOK VS Code extension will be documented in this file.
 
+## `v0.1.22` (2026-09-14)
+
+### Fixes
+- Filter VS Code-internal model options before sending requests to the Cerebras API
+
+## `v0.1.21` (2026-09-14)
+
+### Features
+- Add multimodal Qwen 3.8 27B in production with tool calling and high reasoning
+- Remove Gemma 4 31B from the supported model list
+- Remove GLM 4.7 from the supported model list
+- Remove deprecated `llama3.1-8b` and `qwen-3-235b-a22b-instruct-2507` models
+
 ## `v0.1.20` (2026-02-15)
 
 ### Features

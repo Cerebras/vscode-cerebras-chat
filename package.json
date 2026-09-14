@@ -10,9 +10,9 @@
 		"type": "git",
 		"url": "https://github.com/cerebras/vscode-cerebras-chat"
 	},
-	"version": "0.1.20",
+	"version": "0.1.22",
 	"engines": {
-		"vscode": "^1.104.0"
+		"vscode": "^1.120.0"
 	},
 	"categories": [
 		"AI",
@@ -43,21 +43,23 @@
 		"watch:esbuild": "node esbuild.js --watch",
 		"watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
 		"package": "npm run check-types && npm run lint && node esbuild.js --production",
+		"test": "node --experimental-strip-types --test test/*.test.mjs",
 		"check-types": "tsc --noEmit",
 		"deploy": "vsce publish",
 		"prerelease": "vsce publish --pre-release",
 		"lint": "eslint src"
 	},
 	"dependencies": {
-		"@cerebras/cerebras_cloud_sdk": "^1.0.0",
+		"@cerebras/cerebras_cloud_sdk": "^1.91.0",
 		"tiktoken": "^1.0.22"
 	},
 	"devDependencies": {
 		"@eslint/js": "^9.13.0",
 		"@stylistic/eslint-plugin": "^2.9.0",
 		"@types/node": "^22",
-		"@types/vscode": "^1.103.0",
+		"@types/vscode": "^1.120.0",
 		"@vscode/dts": "^0.4.1",
+		"@vscode/vsce": "3.9.2",
 		"esbuild": "^0.25.8",
 		"eslint": "^9.13.0",
 		"npm-run-all": "^4.1.5",

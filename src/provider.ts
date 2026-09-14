@@ -1,11 +1,10 @@
-import { CancellationToken, Disposable, ExtensionContext, InputBoxValidationSeverity, LanguageModelChatInformation, LanguageModelChatMessage, LanguageModelChatMessageRole, LanguageModelChatProvider, LanguageModelResponsePart, LanguageModelTextPart, LanguageModelToolCallPart, LanguageModelToolResultPart, Progress, ProvideLanguageModelChatResponseOptions, window } from "vscode";
+import { CancellationToken, Disposable, ExtensionContext, InputBoxValidationSeverity, LanguageModelChatInformation, LanguageModelChatMessage, LanguageModelChatMessageRole, LanguageModelChatProvider, LanguageModelChatToolMode, LanguageModelDataPart, LanguageModelResponsePart, LanguageModelTextPart, LanguageModelToolCallPart, LanguageModelToolResultPart, Progress, ProvideLanguageModelChatResponseOptions, window } from "vscode";
 import { Cerebras } from "@cerebras/cerebras_cloud_sdk";
-import { ChatCompletionCreateParams, ChatCompletionCreateParamsStreaming } from "@cerebras/cerebras_cloud_sdk/src/resources/chat/index.js";
+import { ChatCompletionCreateParamsStreaming } from "@cerebras/cerebras_cloud_sdk/src/resources/chat/index.js";
 import { get_encoding, Tiktoken } from "tiktoken";
+import { toCerebrasMessages, type CerebrasMessageInput, type CerebrasMessagePart } from "./messageConversion";
+import { sanitizeCerebrasModelOptions } from "./modelOptions";
 
-
-type ChatCompletionMessage = ChatCompletionCreateParams.SystemMessageRequest | ChatCompletionCreateParams.ToolMessageRequest | ChatCompletionCreateParams.AssistantMessageRequest | ChatCompletionCreateParams.UserMessageRequest;
-type AssistantToolCalls = NonNullable<ChatCompletionCreateParams.AssistantMessageRequest['tool_calls']>;
 
 interface CerebrasModel {
 	id: string;
@@ -15,9 +14,11 @@ interface CerebrasModel {
 	maxOutputTokens: number;
 	defaultCompletionTokens: number;
 	toolCalling: boolean;
+	imageInput?: boolean;
 	supportsParallelToolCalls: boolean;
 	hasMultiTurnToolLimitations?: boolean;
 	supportsReasoningEffort?: boolean;
+	reasoningEffort?: 'low' | 'medium' | 'high';
 	supportsThinking?: boolean;
 	temperature?: number;
 	top_p?: number;
@@ -32,14 +33,18 @@ const DEFAULT_COMPLETION_TOKENS = 8192;
 // Production models
 const PRODUCTION_MODELS: CerebrasModel[] = [
 	{
-		id: "llama3.1-8b",
-		name: "Llama 3.1 8B",
-		detail: "~2,200 tokens/sec",
-		maxInputTokens: 32768,
-		maxOutputTokens: 8192,
+		id: "qwen-3.8-27b",
+		name: "Qwen 3.8 27B",
+		maxInputTokens: 65536,
+		maxOutputTokens: 32768,
 		defaultCompletionTokens: DEFAULT_COMPLETION_TOKENS,
-		toolCalling: false,
-		supportsParallelToolCalls: false
+		toolCalling: true,
+		imageInput: true,
+		supportsParallelToolCalls: true,
+		supportsReasoningEffort: true,
+		reasoningEffort: 'high',
+		temperature: 1.0,
+		top_p: 0.95,
 	},
 	{
 		id: "gpt-oss-120b",
@@ -55,31 +60,7 @@ const PRODUCTION_MODELS: CerebrasModel[] = [
 ];
 
 // Preview models
-const PREVIEW_MODELS: CerebrasModel[] = [
-	{
-		id: "zai-glm-4.7",
-		name: "GLM 4.7 (preview)",
-		detail: "~1,000 tokens/sec",
-		maxInputTokens: 131072, // 131k for paid tiers, 64k for free tier
-		maxOutputTokens: 40960,
-		defaultCompletionTokens: DEFAULT_COMPLETION_TOKENS,
-		toolCalling: true,
-		supportsThinking: false,
-		supportsParallelToolCalls: false,
-		temperature: 1.0,
-		top_p: 0.95,
-	},
-	{
-		id: "qwen-3-235b-a22b-instruct-2507",
-		name: "Qwen 3 235B Instruct (preview)",
-		detail: "~1,400 tokens/sec",
-		maxInputTokens: 131000, // 131k for paid tiers, 64k for free tier
-		maxOutputTokens: 40960,
-		defaultCompletionTokens: DEFAULT_COMPLETION_TOKENS,
-		toolCalling: false,
-		supportsParallelToolCalls: false
-	}
-];
+const PREVIEW_MODELS: CerebrasModel[] = [];
 
 function getChatModelInfo(model: CerebrasModel): LanguageModelChatInformation {
 	return {
@@ -93,86 +74,44 @@ function getChatModelInfo(model: CerebrasModel): LanguageModelChatInformation {
 		version: "1.0.0",
 		capabilities: {
 			toolCalling: model.toolCalling,
-			imageInput: false,
+			imageInput: model.imageInput ?? false,
 		}
 	};
 }
 
 const THINK_DELIMITER = '</think>';
 
-function createChatMessage(role: LanguageModelChatMessageRole, textParts: string[], toolCalls: AssistantToolCalls): ChatCompletionMessage | null {
-	const messageContent = textParts.join('');
+function toCerebrasMessageInput(message: LanguageModelChatMessage): CerebrasMessageInput {
+	const content: CerebrasMessagePart[] = [];
 
-	if (toolCalls.length > 0) {
-		return {
-			role: "assistant",
-			content: messageContent || '',
-			tool_calls: [...toolCalls]
-		} satisfies ChatCompletionCreateParams.AssistantMessageRequest;
-	}
-
-	if (messageContent.length === 0) {
-		return null;
-	}
-
-	return {
-		role: toChatMessageRole(role),
-		content: messageContent
-	} satisfies ChatCompletionMessage;
-}
-
-function toToolMessage(part: LanguageModelToolResultPart): ChatCompletionCreateParams.ToolMessageRequest {
-	const resultContent = part.content
-		.filter(resultPart => resultPart instanceof LanguageModelTextPart)
-		.map(resultPart => (resultPart as LanguageModelTextPart).value)
-		.join('');
-
-	return {
-		role: "tool",
-		content: resultContent,
-		tool_call_id: part.callId
-	};
-}
-
-function toCerebrasMessages(messages: Array<LanguageModelChatMessage>): ChatCompletionMessage[] {
-	const cerebrasMessages: ChatCompletionMessage[] = [];
-
-	for (const msg of messages) {
-		const textParts: string[] = [];
-		const toolCalls: AssistantToolCalls = [];
-
-		const flushPendingMessage = () => {
-			const pendingMessage = createChatMessage(msg.role, textParts, toolCalls);
-			if (pendingMessage) {
-				cerebrasMessages.push(pendingMessage);
-			}
-			textParts.length = 0;
-			toolCalls.length = 0;
-		};
-
-		for (const part of msg.content) {
-			if (part instanceof LanguageModelTextPart) {
-				textParts.push(part.value);
-			} else if (part instanceof LanguageModelToolCallPart) {
-				toolCalls.push({
-					id: part.callId,
-					type: "function",
-					function: {
-						name: part.name,
-						arguments: JSON.stringify(part.input)
-					}
-				});
-			} else if (part instanceof LanguageModelToolResultPart) {
-				// Tool results must stay as separate messages so mixed user/tool content keeps its order.
-				flushPendingMessage();
-				cerebrasMessages.push(toToolMessage(part));
-			}
+	for (const part of message.content) {
+		if (part instanceof LanguageModelTextPart) {
+			content.push({ kind: 'text', value: part.value });
+		} else if (part instanceof LanguageModelDataPart && part.mimeType.startsWith('image/')) {
+			content.push({ kind: 'image', mimeType: part.mimeType, data: part.data });
+		} else if (part instanceof LanguageModelToolCallPart) {
+			content.push({
+				kind: 'tool_call',
+				callId: part.callId,
+				name: part.name,
+				input: part.input,
+			});
+		} else if (part instanceof LanguageModelToolResultPart) {
+			content.push({
+				kind: 'tool_result',
+				callId: part.callId,
+				content: part.content
+					.filter(resultPart => resultPart instanceof LanguageModelTextPart)
+					.map(resultPart => (resultPart as LanguageModelTextPart).value)
+					.join(''),
+			});
 		}
-
-		flushPendingMessage();
 	}
 
-	return cerebrasMessages;
+	return {
+		role: toChatMessageRole(message.role),
+		content,
+	};
 }
 
 export class CerebrasChatModelProvider implements LanguageModelChatProvider, Disposable {
@@ -280,15 +219,15 @@ export class CerebrasChatModelProvider implements LanguageModelChatProvider, Dis
 		}
 
 		// Convert VS Code messages to Cerebras format while preserving tool-result ordering.
-		const cerebrasMessages = toCerebrasMessages(messages);
+		const cerebrasMessages = toCerebrasMessages(messages.map(toCerebrasMessageInput));
 
 		// Convert VS Code tools to Cerebras format
 		const cerebrasTools = options.tools?.map(tool => ({
-			type: "function",
+			type: "function" as const,
 			function: {
 				name: tool.name,
 				description: tool.description,
-				parameters: tool.inputSchema || {}
+				parameters: (tool.inputSchema ?? {}) as Record<string, unknown>
 			}
 		}));
 
@@ -296,18 +235,36 @@ export class CerebrasChatModelProvider implements LanguageModelChatProvider, Dis
 		// Use defaultCompletionTokens instead of maxOutputTokens to prevent
 		// premature rate limiting - Cerebras rate limiter estimates quota based
 		// on max_completion_tokens upfront, not actual usage
+		const callerModelOptions = sanitizeCerebrasModelOptions(options.modelOptions);
+		const maxCompletionTokens = callerModelOptions.max_completion_tokens !== undefined
+			? callerModelOptions.max_completion_tokens
+			: callerModelOptions.max_tokens !== undefined
+				? undefined
+				: foundModel.defaultCompletionTokens;
 		const requestOptions: ChatCompletionCreateParamsStreaming = {
+			...callerModelOptions,
 			model: model.id,
 			messages: cerebrasMessages,
-			max_completion_tokens: foundModel.defaultCompletionTokens,
+			max_completion_tokens: maxCompletionTokens,
 			stream: true,
-			temperature: foundModel.temperature ?? 0.1,
-			top_p: foundModel.top_p ?? undefined,
+			temperature: callerModelOptions.temperature !== undefined
+				? callerModelOptions.temperature
+				: foundModel.temperature ?? 0.1,
+			top_p: callerModelOptions.top_p !== undefined ? callerModelOptions.top_p : foundModel.top_p,
+			reasoning_effort: callerModelOptions.reasoning_effort !== undefined
+				? callerModelOptions.reasoning_effort
+				: foundModel.reasoningEffort,
+			tools: undefined,
+			tool_choice: undefined,
+			parallel_tool_calls: undefined,
 		};
 
 		// Add tools if available
 		if (cerebrasTools && cerebrasTools.length > 0 && foundModel.toolCalling) {
 			requestOptions.tools = cerebrasTools;
+			requestOptions.tool_choice = options.toolMode === LanguageModelChatToolMode.Required ? "required" : "auto";
+			requestOptions.parallel_tool_calls = callerModelOptions.parallel_tool_calls
+				?? foundModel.supportsParallelToolCalls;
 		}
 
 		const chatCompletion = await this.client.chat.completions.create(requestOptions);
@@ -320,6 +277,12 @@ export class CerebrasChatModelProvider implements LanguageModelChatProvider, Dis
 			// Check if the operation was cancelled
 			if (token.isCancellationRequested) {
 				break;
+			}
+			if ('error' in chunk) {
+				throw new Error(chunk.error.message ?? `Cerebras request failed with status ${chunk.status_code}`);
+			}
+			if (chunk.object !== 'chat.completion.chunk') {
+				continue;
 			}
 
 			// Report the response chunk
