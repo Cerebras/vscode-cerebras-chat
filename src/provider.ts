@@ -1,10 +1,11 @@
-import { CancellationToken, Disposable, ExtensionContext, InputBoxValidationSeverity, LanguageModelChatInformation, LanguageModelChatMessage, LanguageModelChatMessageRole, LanguageModelChatProvider, LanguageModelDataPart, LanguageModelResponsePart, LanguageModelTextPart, LanguageModelToolCallPart, LanguageModelToolResultPart, Progress, ProvideLanguageModelChatResponseOptions, window } from "vscode";
+import { CancellationToken, Disposable, ExtensionContext, InputBoxValidationSeverity, LanguageModelChatInformation, LanguageModelChatMessage, LanguageModelChatMessageRole, LanguageModelChatProvider, LanguageModelChatToolMode, LanguageModelDataPart, LanguageModelResponsePart, LanguageModelTextPart, LanguageModelToolCallPart, LanguageModelToolResultPart, Progress, ProvideLanguageModelChatResponseOptions, window } from "vscode";
 import { Cerebras } from "@cerebras/cerebras_cloud_sdk";
 import { ChatCompletionCreateParams, ChatCompletionCreateParamsStreaming } from "@cerebras/cerebras_cloud_sdk/src/resources/chat/index.js";
 import { get_encoding, Tiktoken } from "tiktoken";
 
 
 type ChatCompletionMessage = ChatCompletionCreateParams.SystemMessageRequest | ChatCompletionCreateParams.ToolMessageRequest | ChatCompletionCreateParams.AssistantMessageRequest | ChatCompletionCreateParams.UserMessageRequest;
+type CerebrasModelOptions = Partial<ChatCompletionCreateParamsStreaming>;
 
 interface CerebrasModel {
 	id: string;
@@ -256,11 +257,11 @@ export class CerebrasChatModelProvider implements LanguageModelChatProvider, Dis
 
 		// Convert VS Code tools to Cerebras format
 		const cerebrasTools = options.tools?.map(tool => ({
-			type: "function",
+			type: "function" as const,
 			function: {
 				name: tool.name,
 				description: tool.description,
-				parameters: tool.inputSchema || {}
+				parameters: (tool.inputSchema ?? {}) as Record<string, unknown>
 			}
 		}));
 
@@ -268,20 +269,35 @@ export class CerebrasChatModelProvider implements LanguageModelChatProvider, Dis
 		// Use defaultCompletionTokens instead of maxOutputTokens to prevent
 		// premature rate limiting - Cerebras rate limiter estimates quota based
 		// on max_completion_tokens upfront, not actual usage
+		const callerModelOptions = (options.modelOptions ?? {}) as CerebrasModelOptions;
+		const maxCompletionTokens = callerModelOptions.max_completion_tokens !== undefined
+			? callerModelOptions.max_completion_tokens
+			: callerModelOptions.max_tokens !== undefined
+				? undefined
+				: foundModel.defaultCompletionTokens;
 		const requestOptions: ChatCompletionCreateParamsStreaming = {
+			...callerModelOptions,
 			model: model.id,
 			messages: cerebrasMessages,
-			max_completion_tokens: foundModel.defaultCompletionTokens,
+			max_completion_tokens: maxCompletionTokens,
 			stream: true,
-			temperature: foundModel.temperature ?? 0.1,
-			top_p: foundModel.top_p ?? undefined,
-			reasoning_effort: foundModel.reasoningEffort ?? undefined,
+			temperature: callerModelOptions.temperature !== undefined
+				? callerModelOptions.temperature
+				: foundModel.temperature ?? 0.1,
+			top_p: callerModelOptions.top_p !== undefined ? callerModelOptions.top_p : foundModel.top_p,
+			reasoning_effort: callerModelOptions.reasoning_effort !== undefined
+				? callerModelOptions.reasoning_effort
+				: foundModel.reasoningEffort,
+			tools: undefined,
+			tool_choice: undefined,
 		};
 
 		// Add tools if available
 		if (cerebrasTools && cerebrasTools.length > 0 && foundModel.toolCalling) {
 			requestOptions.tools = cerebrasTools;
-			requestOptions.parallel_tool_calls = foundModel.supportsParallelToolCalls;
+			requestOptions.tool_choice = options.toolMode === LanguageModelChatToolMode.Required ? "required" : "auto";
+			requestOptions.parallel_tool_calls = callerModelOptions.parallel_tool_calls
+				?? foundModel.supportsParallelToolCalls;
 		}
 
 		const chatCompletion = await this.client.chat.completions.create(requestOptions);
@@ -294,6 +310,12 @@ export class CerebrasChatModelProvider implements LanguageModelChatProvider, Dis
 			// Check if the operation was cancelled
 			if (token.isCancellationRequested) {
 				break;
+			}
+			if ('error' in chunk) {
+				throw new Error(chunk.error.message ?? `Cerebras request failed with status ${chunk.status_code}`);
+			}
+			if (chunk.object !== 'chat.completion.chunk') {
+				continue;
 			}
 
 			// Report the response chunk
