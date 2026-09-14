@@ -30,6 +30,6 @@ jobs:
         path: out/
     - name: Publish
       if: success()
-      run: npm run prerelease
+      run: npm run deploy
       env:
         VSCE_PAT: ${{ secrets.VSCE_PAT }}
