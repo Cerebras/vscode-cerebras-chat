@@ -2,7 +2,14 @@ import { CancellationToken, Disposable, ExtensionContext, InputBoxValidationSeve
 import { Cerebras } from "@cerebras/cerebras_cloud_sdk";
 import { ChatCompletionCreateParams, ChatCompletionCreateParamsStreaming } from "@cerebras/cerebras_cloud_sdk/src/resources/chat/index.js";
 import { get_encoding, Tiktoken } from "tiktoken";
-import { sanitizeCerebrasModelOptions } from "./modelOptions";
+import {
+	CerebrasRateLimitSnapshot,
+	getPreStreamWaitNotice,
+	isLowRateLimitTier,
+	parseCerebrasRateLimitHeaders,
+	resolveMaxCompletionTokens,
+	sanitizeCerebrasModelOptions,
+} from "./modelOptions";
 
 
 type ChatCompletionMessage = ChatCompletionCreateParams.SystemMessageRequest | ChatCompletionCreateParams.ToolMessageRequest | ChatCompletionCreateParams.AssistantMessageRequest | ChatCompletionCreateParams.UserMessageRequest;
@@ -82,9 +89,12 @@ function getChatModelInfo(model: CerebrasModel): LanguageModelChatInformation {
 
 const THINK_DELIMITER = '</think>';
 
+const PRE_STREAM_WAIT_NOTICE_DELAY_MS = 2500;
+
 export class CerebrasChatModelProvider implements LanguageModelChatProvider, Disposable {
 	private client: Cerebras | null = null;
 	private tokenizer: Tiktoken | null = null;
+	private lastRateLimits: CerebrasRateLimitSnapshot | null = null;
 
 	constructor(private readonly context: ExtensionContext) { }
 
@@ -270,15 +280,21 @@ export class CerebrasChatModelProvider implements LanguageModelChatProvider, Dis
 		// premature rate limiting - Cerebras rate limiter estimates quota based
 		// on max_completion_tokens upfront, not actual usage
 		const callerModelOptions = sanitizeCerebrasModelOptions(options.modelOptions);
-		const maxCompletionTokens = callerModelOptions.max_completion_tokens !== undefined
-			? callerModelOptions.max_completion_tokens
-			: callerModelOptions.max_tokens !== undefined
-				? undefined
-				: foundModel.defaultCompletionTokens;
+		const isAgentRequest = Boolean(cerebrasTools && cerebrasTools.length > 0 && foundModel.toolCalling);
+		const maxCompletionTokens = resolveMaxCompletionTokens({
+			callerMaxCompletionTokens: callerModelOptions.max_completion_tokens,
+			callerMaxTokens: callerModelOptions.max_tokens,
+			defaultCompletionTokens: foundModel.defaultCompletionTokens,
+			isAgentRequest,
+			rateLimits: this.lastRateLimits,
+		});
 		const requestOptions: ChatCompletionCreateParamsStreaming = {
 			...callerModelOptions,
 			model: model.id,
 			messages: cerebrasMessages,
+			max_tokens: isAgentRequest && isLowRateLimitTier(this.lastRateLimits)
+				? undefined
+				: callerModelOptions.max_tokens,
 			max_completion_tokens: maxCompletionTokens,
 			stream: true,
 			temperature: callerModelOptions.temperature !== undefined
@@ -301,13 +317,49 @@ export class CerebrasChatModelProvider implements LanguageModelChatProvider, Dis
 				?? foundModel.supportsParallelToolCalls;
 		}
 
-		const chatCompletion = await this.client.chat.completions.create(requestOptions);
+		let waitStatusDisposable: Disposable | undefined;
+		const waitNoticeTimer = setTimeout(() => {
+			waitStatusDisposable = window.setStatusBarMessage(
+				getPreStreamWaitNotice(this.lastRateLimits),
+				60000
+			);
+		}, PRE_STREAM_WAIT_NOTICE_DELAY_MS);
+		const clearWaitNotice = (): void => {
+			clearTimeout(waitNoticeTimer);
+			if (waitStatusDisposable) {
+				waitStatusDisposable.dispose();
+				waitStatusDisposable = undefined;
+			}
+		};
+
+		let chatCompletion: AsyncIterable<unknown>;
+		try {
+			const createPromise = this.client.chat.completions.create(requestOptions);
+			if (typeof (createPromise as { withResponse?: () => Promise<{ data: AsyncIterable<unknown>; response: { headers?: Headers } }> }).withResponse === 'function') {
+				const { data, response } = await (createPromise as unknown as {
+					withResponse(): Promise<{ data: AsyncIterable<unknown>; response: { headers?: Headers } }>;
+				}).withResponse();
+				const parsedHeaders = parseCerebrasRateLimitHeaders(response?.headers);
+				if (parsedHeaders) {
+					this.lastRateLimits = parsedHeaders;
+				}
+				chatCompletion = data;
+			} else {
+				chatCompletion = await createPromise;
+			}
+		} catch (err) {
+			clearWaitNotice();
+			throw err;
+		}
 
 		// Reset text buffer at the start of each response
 		let thinkingBuffer: string | null = '';
 
-		// Process streaming response
-		for await (const chunk of chatCompletion) {
+		try {
+			// Process streaming response
+			for await (const rawChunk of chatCompletion) {
+				clearWaitNotice();
+				const chunk = rawChunk as Awaited<ReturnType<typeof this.client.chat.completions.create>> extends AsyncIterable<infer T> ? T : never;
 			// Check if the operation was cancelled
 			if (token.isCancellationRequested) {
 				break;
@@ -366,6 +418,8 @@ export class CerebrasChatModelProvider implements LanguageModelChatProvider, Dis
 					}
 				}
 			}
+		} finally {
+			clearWaitNotice();
 		}
 	}
 
