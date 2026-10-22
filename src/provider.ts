@@ -69,7 +69,7 @@ function getChatModelInfo(model: CerebrasModel): LanguageModelChatInformation {
 		name: model.name,
 		tooltip: `Cerebras ${model.name} model`,
 		family: "cerebras",
-		detail: model.detail,
+		detail: model.detail ? `Cerebras • ${model.detail}` : "Cerebras",
 		maxInputTokens: model.maxInputTokens,
 		maxOutputTokens: model.maxOutputTokens,
 		version: "1.0.0",
