@@ -54,7 +54,7 @@ const PRODUCTION_MODELS: CerebrasModel[] = [
 		maxInputTokens: 131000, // 131k for paid tiers, 64k for free tier
 		maxOutputTokens: 64000,
 		defaultCompletionTokens: DEFAULT_COMPLETION_TOKENS,
-		toolCalling: false,
+		toolCalling: true,
 		supportsReasoningEffort: true,
 		supportsParallelToolCalls: false,
 	},
